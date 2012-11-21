@@ -1,24 +1,24 @@
 
 # project name
-project = u'Project Name'
+project = u'RabbitMQ Management API Client'
 
 # Tex info conf
 texinfo_documents = [
-  ('index', 'Project name', u'Project Documentation',
-   u'Copyright holder', 'Project name', 'One line description of project.',
+  ('index', 'RabbitMQ Management API Client', u'RabbitMQ Management API Client Documentation',
+   u'Alchemy', 'RabbitMQ Management API Client', 'RabbitMQ Management Plugin PHP Client.',
    'Miscellaneous'),
 ]
 
 # Man page conf
 man_pages = [
-    ('index', 'projectname', u'PProject name Documentation',
+    ('index', 'RabbitMQ Management API Client', u'RabbitMQ Management API Client Documentation',
      [u'Copyright holder'], 1)
 ]
 
 # Latex doc conf
 latex_documents = [
-  ('index', 'ProjectName.tex', u'Project Name Documentation',
-   u'Copyright holder', 'manual'),
+  ('index', 'ProjectName.tex', u'RabbitMQ Management API Client Documentation',
+   u'Alchemy', 'manual'),
 ]
 
 # html help basename
