@@ -241,11 +241,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testListQueues()
     {
-        $queue = new Queue();
-        $queue->vhost = '/';
-        $queue->name = self::QUEUE_TEST_NAME;
-
-        $this->object->addQueue($queue);
+        $queue = $this->createQueue();
 
         $queues = $this->object->listQueues();
 
@@ -256,13 +252,20 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testListQueuesWithVhost()
+    private function createQueue()
     {
         $queue = new Queue();
         $queue->vhost = '/';
         $queue->name = self::QUEUE_TEST_NAME;
 
         $this->object->addQueue($queue);
+
+        return $queue;
+    }
+
+    public function testListQueuesWithVhost()
+    {
+        $queue = $this->createQueue();
 
         $queues = $this->object->listQueues(self::VIRTUAL_HOST);
 
@@ -283,8 +286,12 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testGetQueue()
     {
+        $queue = $this->createQueue();
+        
         $queues = $this->object->listQueues()->toArray();
         $expectedQueue = array_pop($queues);
+
+        $this->assertInstanceOf('RabbitMQ\Entity\Queue', $expectedQueue);
 
         $queue = $this->object->getQueue($expectedQueue->vhost, $expectedQueue->name);
         $this->assertInstanceOf('RabbitMQ\Entity\Queue', $queue);
@@ -329,11 +336,8 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testDeleteQueue()
     {
-        $queue = new Queue();
-        $queue->name = self::QUEUE_TEST_NAME;
-        $queue->vhost = '/';
+        $queue = $this->createQueue();
 
-        $this->object->addQueue($queue);
         $this->object->deleteQueue('/', self::QUEUE_TEST_NAME);
 
         try {
@@ -354,11 +358,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testAddQueueThatAlreadyExists()
     {
-        $queue = new Queue();
-        $queue->vhost = '/';
-        $queue->name = self::QUEUE_TEST_NAME;
-
-        $this->object->addQueue($queue);
+        $queue = $this->createQueue();
 
         $queue->durable = true;
 
@@ -428,12 +428,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testAddBinding()
     {
-        $queue = new Queue();
-        $queue->name = self::QUEUE_TEST_NAME;
-        $queue->vhost = '/';
-        $queue->durable = true;
-
-        $this->object->addQueue($queue);
+        $queue = $this->createQueue();
 
         $exchange = new Exchange();
         $exchange->name = self::EXCHANGE_TEST_NAME;
@@ -504,12 +499,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     private function createBinding()
     {
-        $queue = new Queue();
-        $queue->name = self::QUEUE_TEST_NAME;
-        $queue->vhost = '/';
-        $queue->durable = true;
-
-        $this->object->addQueue($queue);
+        $queue = $this->createQueue();
 
         $exchange = new Exchange();
         $exchange->name = self::EXCHANGE_TEST_NAME;
@@ -575,12 +565,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testPurgeQueue()
     {
-        $queue = new Queue();
-        $queue->name = self::QUEUE_TEST_NAME;
-        $queue->vhost = '/';
-        $queue->durable = true;
-
-        $this->object->addQueue($queue);
+        $queue = $this->createQueue();
 
         $exchange = new Exchange();
         $exchange->name = self::EXCHANGE_TEST_NAME;
