@@ -588,13 +588,13 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
             $n--;
         }
 
-        usleep(1000000);
+        usleep(2000000);
         $this->object->refreshQueue($queue);
         $this->assertEquals(12, $queue->messages_ready);
 
         $this->object->purgeQueue('/', self::QUEUE_TEST_NAME);
 
-        usleep(2000000);
+        usleep(4000000);
         $this->object->refreshQueue($queue);
         $this->assertEquals(0, $queue->messages_ready);
     }
