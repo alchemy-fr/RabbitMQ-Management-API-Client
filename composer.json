@@ -1,0 +1,23 @@
+{
+    "name": "alchemy/rabbit-mq-api-client",
+    "description": "RabbitMQ API Client",
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "Romain Neutron",
+            "email": "imprec@gmail.com"
+        }
+    ],
+    "require": {
+        "guzzle/guzzle": "dev-master",
+        "doctrine/common": "dev-master"
+    },
+    "require-dev": {
+        "videlalvaro/php-amqplib": "dev-master"
+    },
+    "autoload": {
+        "psr-0": {
+            "RabbitMQ": "src"
+        }
+    }
+}
