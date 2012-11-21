@@ -241,6 +241,12 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testListQueues()
     {
+        $queue = new Queue();
+        $queue->vhost = '/';
+        $queue->name = self::QUEUE_TEST_NAME;
+
+        $this->object->addQueue($queue);
+
         $queues = $this->object->listQueues();
 
         $this->assertNonEmptyArrayCollection($queues);
@@ -252,6 +258,12 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testListQueuesWithVhost()
     {
+        $queue = new Queue();
+        $queue->vhost = '/';
+        $queue->name = self::QUEUE_TEST_NAME;
+
+        $this->object->addQueue($queue);
+
         $queues = $this->object->listQueues(self::VIRTUAL_HOST);
 
         $this->assertNonEmptyArrayCollection($queues);
@@ -465,26 +477,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testDeleteBinding()
     {
-        $queue = new Queue();
-        $queue->name = self::QUEUE_TEST_NAME;
-        $queue->vhost = '/';
-        $queue->durable = true;
-
-        $this->object->addQueue($queue);
-
-        $exchange = new Exchange();
-        $exchange->name = self::EXCHANGE_TEST_NAME;
-        $exchange->vhost = '/';
-
-        $this->object->addExchange($exchange);
-
-        $binding = new Binding();
-        $binding->destination_type = 'direct';
-        $binding->destination = self::QUEUE_TEST_NAME;
-        $binding->routing_key = 'rounting.key';
-        $binding->vhost = '/';
-
-        $this->object->addBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
+        $this->createBinding();
 
         $found = false;
 
@@ -509,6 +502,30 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    private function createBinding()
+    {
+        $queue = new Queue();
+        $queue->name = self::QUEUE_TEST_NAME;
+        $queue->vhost = '/';
+        $queue->durable = true;
+
+        $this->object->addQueue($queue);
+
+        $exchange = new Exchange();
+        $exchange->name = self::EXCHANGE_TEST_NAME;
+        $exchange->vhost = '/';
+
+        $this->object->addExchange($exchange);
+
+        $binding = new Binding();
+        $binding->destination_type = 'direct';
+        $binding->destination = self::QUEUE_TEST_NAME;
+        $binding->routing_key = 'rounting.key';
+        $binding->vhost = '/';
+
+        $this->object->addBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
+    }
+
     /**
      * @expectedException RabbitMQ\Exception\RuntimeException
      */
@@ -522,6 +539,8 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testListBindings()
     {
+        $this->createBinding();
+
         $bindings = $this->object->listBindings();
 
         $this->assertNonEmptyArrayCollection($bindings);
@@ -533,6 +552,8 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
     public function testListBindingsWithVhost()
     {
+        $this->createBinding();
+
         $bindings = $this->object->listBindings(self::VIRTUAL_HOST);
 
         $this->assertNonEmptyArrayCollection($bindings);
