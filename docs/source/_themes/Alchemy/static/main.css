@@ -1,3 +1,27 @@
 /**
  * Here you write your customizations
  */
+
+body, html {
+    background-color:#659258;
+}
+
+h1,h2,h3,h4,h5,h6, a, a:hover, a:visited{
+    color:#294347;
+}
+
+.hero-unit{
+    background-color: transparent;
+}
+
+.hero-unit h1{
+    color:#df8800;
+}
+
+blockquote {
+    border-color: #df8800;
+}
+
+.admonition.note .first.admonition-title {
+    background-color:#294347;
+}

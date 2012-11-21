@@ -209,9 +209,10 @@ be glad to merge your code.
 Run tests
 ---------
 
-PHP-FFMpeg relies on `PHPUnit <http://www.phpunit.de/manual/current/en/>`_ for
-unit tests. To run tests on your system, ensure you have PHPUnit installed,
-and, at the root of the project, execute it :
+RabbitMQ Management Client relies on
+`PHPUnit <http://www.phpunit.de/manual/current/en/>`_ for unit tests.
+To run tests on your system, ensure you have PHPUnit installed, and, at the
+root of the project, execute it :
 
 .. code-block:: bash
 
