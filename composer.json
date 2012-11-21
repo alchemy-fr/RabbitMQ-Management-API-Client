@@ -2,6 +2,9 @@
     "name": "alchemy/rabbit-mq-api-client",
     "description": "RabbitMQ API Client",
     "minimum-stability": "dev",
+    "config": {
+        "bin-dir": "bin/"
+    },
     "authors": [
         {
             "name": "Romain Neutron",
@@ -13,7 +16,8 @@
         "doctrine/common": "dev-master"
     },
     "require-dev": {
-        "videlalvaro/php-amqplib": "dev-master"
+        "videlalvaro/php-amqplib": "dev-master",
+        "sami/sami": "dev-master"
     },
     "autoload": {
         "psr-0": {
