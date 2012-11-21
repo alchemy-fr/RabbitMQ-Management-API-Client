@@ -1,3 +1,5 @@
+/bin
+/docs/build
 /nbproject
 /vendor
 composer.phar
