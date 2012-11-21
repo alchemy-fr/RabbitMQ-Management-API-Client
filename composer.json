@@ -1,10 +1,13 @@
 {
-    "name": "alchemy/rabbit-mq-api-client",
-    "description": "RabbitMQ API Client",
+    "name": "alchemy/rabbitmq-management-client",
+    "type": "library",
+    "description": "RabbitMQ Management Plugin API Client",
+    "keywords": ["api", "rabbitmq", "management"],
     "minimum-stability": "dev",
     "config": {
         "bin-dir": "bin/"
     },
+    "license": "MIT",
     "authors": [
         {
             "name": "Romain Neutron",
@@ -22,6 +25,11 @@
     "autoload": {
         "psr-0": {
             "RabbitMQ": "src"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "0.1.x-dev"
         }
     }
 }
