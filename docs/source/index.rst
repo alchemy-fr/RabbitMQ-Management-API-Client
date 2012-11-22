@@ -79,7 +79,20 @@ queues, exchanges and bindings settings. This can be easily done with the
 ``Guarantee`` Component.
 
 ``Guarantee`` will look in the configuration to find if what you ask for is
-already correctly set up and fix it, if it is not.
+already correctly set up and eventually fix it if you ask for it.
+
+Probing a queue
++++++++++++++++
+
+Let's probe the status of a queue ; the probe will return one of the following
+constants :
+
+ - ``RabbitMQ\Guarantee::PROBE_RESULT_OK`` If the probed entity is set up with
+ correct options
+ - ``RabbitMQ\Guarantee::PROBE_RESULT_MISCONFIGURED`` If the probed entity is
+ set up with wrong options
+ - ``RabbitMQ\Guarantee::PROBE_RESULT__ABSENT`` if the probed entity is absent
+
 
 .. code-block:: php
 
@@ -97,6 +110,59 @@ already correctly set up and fix it, if it is not.
     $queue->durable = true;
     $queue->auto_delete = false;
 
+    $status = $manager->probeQueue($queue);
+
+    switch ($status) {
+        case Guarantee::PROBE_ABSENT;
+            echo "The queue does not exists";
+            break;
+        case Guarantee::PROBE_MISCONFIGURED;
+            echo "The queue exists but is not well configured";
+            break;
+        case Guarantee::PROBE_OK;
+            echo "The queue exists and is well configured";
+            break;
+    }
+
+Probing an exchange
++++++++++++++++++++
+
+The same is available for exchanges :
+
+.. code-block:: php
+
+    <?php
+    use RabbitMQ\Entity\Exchange;
+
+    $exchange = new Exchange();
+    $exchange->vhost = '/';
+    $exchange->name = 'exchange.dispatcher';
+    $exchange->type = 'fanout';
+
+    $status = $manager->probeExchange($exchange);
+
+Ensure queue configuration
+++++++++++++++++++++++++++
+
+Let's now ensure a queue is set up as required :
+
+.. code-block:: php
+
+    <?php
+    use RabbitMQ\APIClient;
+    use RabbitMQ\Entity\Queue;
+    use RabbitMQ\Guarantee;
+
+    $client = APIClient::factory(array('url'=>'localhost'));
+    $manager = new Guarantee($client);
+
+    $queue = new Queue();
+    $queue->vhost = '/';
+    $queue->name = 'queue.leuleu';
+    $queue->durable = true;
+    $queue->auto_delete = false;
+
+    // Will modify the queue if it is not configured yet
     $manager->ensureQueue($queue);
 
 Recipes
@@ -105,11 +171,8 @@ Recipes
 These recipes are samples of code you could re-use. Most of these are about
 guarantees that are also provided by the ``Guarantee`` component.
 
-Ensure a queue is set up with correct options
-+++++++++++++++++++++++++++++++++++++++++++++
-
-In the following example we want to ensure that a queue 'queue.leuleu' is
-set-up on vhost '/' with durable flag set to true :
+Monitor a queue
++++++++++++++++
 
 .. code-block:: php
 
@@ -120,85 +183,11 @@ set-up on vhost '/' with durable flag set to true :
     try {
         $queue = $client->getQueue('/', 'queue.leuleu');
 
-        if (true !== $queue->durable) {
-            $queue->durable = true;
-
-            $client->deleteQueue('/', 'queue.leuleu');
-            $client->addQueue($queue);
-        }
+        sprintf("Queue contains %d messages", $queue->messages);
+        sprintf("Queue is idle since %s", $queue->idle_since);
 
     } catch (EntityNotFoundException $e) {
-        $queue = new Queue();
-        $queue->vhost = '/';
-        $queue->name = 'queue.leuleu';
-        $queue->durable = true;
-
-        $client->addQueue($queue);
-    }
-
-Ensure an exchange is set up with correct options
-+++++++++++++++++++++++++++++++++++++++++++++++++
-
-In the following example we want to ensure that an exchange of type 'direct',
-named 'airport' is set-up on vhost '/' with durable flag set to true :
-
-.. code-block:: php
-
-    <?php
-    use RabbitMQ\Exception\EntityNotFoundException;
-    use RabbitMQ\Entity\Exchange;
-
-    try {
-        $exchange = $client->getExchange('/', 'airport');
-
-        if (true !== $exchange->durable) {
-            $exchange->durable = true;
-
-            $client->deleteExchange('/', 'airport');
-            $client->addExchange($exchange);
-        }
-
-    } catch (EntityNotFoundException $e) {
-        $exchange = new Exchange();
-        $exchange->vhost = '/';
-        $exchange->name = 'airport';
-        $exchange->durable = true;
-        $exchange->type = 'direct';
-
-        $client->addExchange($exchange);
-    }
-
-Ensure a binding is set up
-+++++++++++++++++++++++++++
-
-In the following example we want to ensure that an exchange names 'airport' is
-bound to a queue named 'queue.leuleu' with a given routing key 'love.routing' :
-
-.. code-block:: php
-
-    <?php
-    use RabbitMQ\Entity\Binding;
-
-    $vhost = '/';
-    $exchange_name = 'airport';
-    $queue_name = 'queue.leuleu';
-    $routing_key = 'love.routing';
-
-    $bindings = $client->listBindingsByExchangeAndQueue($vhost, $exchange_name, $queue_name);
-    $found = false;
-
-    foreach ($bindings as $binding) {
-        if ($routing_key === $binding->routing_key) {
-            $found = true;
-            break;
-        }
-    }
-
-    if (!$found) {
-        $binding = new Binding();
-        $binding->routing_key = $routing_key;
-
-        $client->addBinding($vhost, $exchange_name, $queue_name, $binding);
+        echo "The queue is not found";
     }
 
 Handling Exceptions

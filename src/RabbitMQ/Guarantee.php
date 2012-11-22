@@ -7,9 +7,14 @@ use RabbitMQ\Entity\Binding;
 use RabbitMQ\Entity\Exchange;
 use RabbitMQ\Entity\Queue;
 use RabbitMQ\Exception\EntityNotFoundException;
+use RabbitMQ\Exception\RuntimeException;
 
 class Guarantee
 {
+    const PROBE_ABSENT = -1;
+    const PROBE_MISCONFIGURED = 0;
+    const PROBE_OK = 1;
+
     private $client;
 
     public function __construct(APIClient $client)
@@ -17,35 +22,67 @@ class Guarantee
         $this->client = $client;
     }
 
-    public function ensureExchange(Exchange $exchange)
+    public function probeExchange(Exchange $exchange)
     {
         try {
-            $expectedExchange = $this->client->getExchange($exchange->vhost, $exchange->name);
-
-            if ($expectedExchange !== $exchange) {
-                $this->client->deleteExchange($exchange->vhost, $exchange->name);
-                $this->client->addExchange($exchange);
+            if ($exchange !== $this->client->getExchange($exchange->vhost, $exchange->name)) {
+                return self::PROBE_MISCONFIGURED;
             } else {
-                $this->client->refreshExchange($exchange);
+                return self::PROBE_OK;
             }
         } catch (EntityNotFoundException $e) {
-            $this->client->addExchange($exchange);
+            return self::PROBE_ABSENT;
+        }
+    }
+
+    public function ensureExchange(Exchange $exchange)
+    {
+        switch ($this->probeExchange($exchange)) {
+            case self::PROBE_ABSENT;
+                $this->client->addExchange($exchange);
+                break;
+            case self::PROBE_MISCONFIGURED;
+                $this->client->deleteExchange($exchange->vhost, $exchange->name);
+                $this->client->addExchange($exchange);
+                break;
+            case self::PROBE_OK;
+                $this->client->refreshExchange($exchange);
+                break;
+            default:
+                throw new RuntimeException('Unable to probe exchange');
+                break;
+        }
+    }
+
+    public function probeQueue(Queue $queue)
+    {
+        try {
+            if ($queue !== $this->client->getQueue($queue->vhost, $queue->name)) {
+                return self::PROBE_MISCONFIGURED;
+            } else {
+                return self::PROBE_OK;
+            }
+        } catch (EntityNotFoundException $e) {
+            return self::PROBE_ABSENT;
         }
     }
 
     public function ensureQueue(Queue $queue)
     {
-        try {
-            $expectedQueue = $this->client->getQueue($queue->vhost, $queue->name);
-
-            if ($expectedQueue !== $queue) {
+        switch ($this->probeQueue($queue)) {
+            case self::PROBE_ABSENT;
+                $this->client->addQueue($queue);
+                break;
+            case self::PROBE_MISCONFIGURED;
                 $this->client->deleteQueue($queue->vhost, $queue->name);
                 $this->client->addQueue($queue);
-            } else {
+                break;
+            case self::PROBE_OK;
                 $this->client->refreshQueue($queue);
-            }
-        } catch (EntityNotFoundException $e) {
-            $this->client->addQueue($queue);
+                break;
+            default:
+                throw new RuntimeException('Unable to probe queue');
+                break;
         }
     }
 
@@ -66,7 +103,7 @@ class Guarantee
                 'vhost'       => $vhost,
                 'routing_key' => $routing_key,
                 'arguments'   => $arguments,
-                ));
+            ));
 
             $this->client->addBinding($vhost, $exchange, $queue, $binding);
         }
