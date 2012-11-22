@@ -27,6 +27,70 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->object = new Guarantee($this->client);
     }
 
+
+    /**
+     * @covers RabbitMQ\Management\Guarantee::probeExchange
+     */
+    public function testProbeExchange()
+    {
+        $expectedExchange = new Exchange();
+        $expectedExchange->name = 'test.exchange';
+        $expectedExchange->vhost = '/';
+        $expectedExchange->type = 'topic';
+
+        $this->client->addExchange($expectedExchange);
+
+        $exchange = new Exchange();
+        $exchange->vhost = '/';
+        $exchange->name = 'test.exchange';
+        $exchange->type = 'topic';
+
+        $status = $this->object->probeExchange($exchange);
+
+        $this->client->deleteExchange($expectedExchange->vhost, $expectedExchange->name);
+
+        $this->assertEquals(Guarantee::PROBE_OK, $status);
+    }
+
+    /**
+     * @covers RabbitMQ\Management\Guarantee::probeExchange
+     */
+    public function testProbeExchangeWithDifference()
+    {
+        $expectedExchange = new Exchange();
+        $expectedExchange->name = 'test.exchange';
+        $expectedExchange->vhost = '/';
+        $expectedExchange->type = 'topic';
+
+        $this->client->addExchange($expectedExchange);
+
+        $exchange = new Exchange();
+        $exchange->vhost = '/';
+        $exchange->name = 'test.exchange';
+        $exchange->type = 'fanout';
+
+        $status = $this->object->probeExchange($exchange);
+
+        $this->client->deleteExchange($expectedExchange->vhost, $expectedExchange->name);
+
+        $this->assertEquals(Guarantee::PROBE_MISCONFIGURED, $status);
+    }
+
+    /**
+     * @covers RabbitMQ\Management\Guarantee::probeExchange
+     */
+    public function testProbeExchangeThatDoesNotExists()
+    {
+        $exchange = new Exchange();
+        $exchange->vhost = '/';
+        $exchange->name = 'test.exchange';
+        $exchange->type = 'fanout';
+
+        $status = $this->object->probeExchange($exchange);
+
+        $this->assertEquals(Guarantee::PROBE_ABSENT, $status);
+    }
+
     /**
      * @covers RabbitMQ\Management\Guarantee::ensureExchange
      */
@@ -120,6 +184,65 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($exchange->internal);
 
         $this->client->deleteExchange($expectedExchange->vhost, $expectedExchange->name);
+    }
+
+    /**
+     * @covers RabbitMQ\Management\Guarantee::probeQueue
+     */
+    public function testProbeQueue()
+    {
+        $expectedQueue = new Queue();
+        $expectedQueue->name = 'test.queue';
+        $expectedQueue->vhost = '/';
+
+        $this->client->addQueue($expectedQueue);
+
+        $queue = new Queue();
+        $queue->vhost = '/';
+        $queue->name = 'test.queue';
+
+        $status = $this->object->probeQueue($queue);
+
+        $this->client->deleteQueue($queue->vhost, $queue->name);
+
+        $this->assertEquals(Guarantee::PROBE_OK, $status);
+    }
+
+    /**
+     * @covers RabbitMQ\Management\Guarantee::probeQueue
+     */
+    public function testProbeQueueWithDifference()
+    {
+        $expectedQueue = new Queue();
+        $expectedQueue->name = 'test.queue';
+        $expectedQueue->vhost = '/';
+        $expectedQueue->durable = true;
+
+        $this->client->addQueue($expectedQueue);
+
+        $queue = new Queue();
+        $queue->vhost = '/';
+        $queue->name = 'test.queue';
+
+        $status = $this->object->probeQueue($queue);
+
+        $this->client->deleteQueue($queue->vhost, $queue->name);
+
+        $this->assertEquals(Guarantee::PROBE_MISCONFIGURED, $status);
+    }
+
+    /**
+     * @covers RabbitMQ\Management\Guarantee::probeQueue
+     */
+    public function testProbeQueueThatDoesNotExists()
+    {
+        $queue = new Queue();
+        $queue->vhost = '/';
+        $queue->name = 'test.queue';
+
+        $status = $this->object->probeQueue($queue);
+
+        $this->assertEquals(Guarantee::PROBE_ABSENT, $status);
     }
 
     /**

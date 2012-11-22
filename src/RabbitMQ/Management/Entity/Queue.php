@@ -4,9 +4,9 @@ namespace RabbitMQ\Management\Entity;
 
 class Queue extends AbstractEntity
 {
-    public $arguments;
-    public $auto_delete;
-    public $durable;
+    public $arguments = array();
+    public $auto_delete = false;
+    public $durable = false;
     public $name;
     public $vhost;
 

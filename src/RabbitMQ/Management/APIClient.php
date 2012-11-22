@@ -51,7 +51,7 @@ class APIClient
         try {
             $this->client->delete(sprintf('/api/connections/%s', urlencode($name)))->send();
         } catch (RequestException $e) {
-            throw new RuntimeException('Failed to delete connection');
+            throw new RuntimeException('Failed to delete connection', $e->getCode(), $e);
         }
 
         return $this;
@@ -110,7 +110,7 @@ class APIClient
         try {
             $this->client->delete($uri)->send();
         } catch (RequestException $e) {
-            throw new RuntimeException('Unable to delete exchange');
+            throw new RuntimeException('Unable to delete exchange', $e->getCode(), $e);
         }
 
         return $this;
@@ -118,7 +118,7 @@ class APIClient
 
     public function refreshExchange(Exchange $exchange)
     {
-        $uri = sprintf('/api/exchange/%s/%s', urlencode($exchange->vhost), urlencode($exchange->name));
+        $uri = sprintf('/api/exchanges/%s/%s', urlencode($exchange->vhost), urlencode($exchange->name));
 
         return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Exchange', $exchange);
     }
@@ -215,7 +215,7 @@ class APIClient
                 sprintf('/api/queues/%s/%s', urlencode($vhost), urlencode($name))
             )->send();
         } catch (RequestException $e) {
-            throw new RuntimeException('Unable to delete queue');
+            throw new RuntimeException('Unable to delete queue', $e->getCode(), $e);
         }
 
         return $this;
@@ -236,7 +236,7 @@ class APIClient
                 sprintf('/api/queues/%s/%s/contents', urlencode($vhost), urlencode($name))
             )->send();
         } catch (RequestException $e) {
-            throw new RuntimeException('Unable to purge queue');
+            throw new RuntimeException('Unable to purge queue', $e->getCode(), $e);
         }
 
         return $this;
@@ -276,7 +276,7 @@ class APIClient
         try {
             $this->client->delete($uri)->send();
         } catch (RequestException $e) {
-            throw new RuntimeException('Unable to delete binding');
+            throw new RuntimeException('Unable to delete binding', $e->getCode(), $e);
         }
 
         return $this;
@@ -317,10 +317,10 @@ class APIClient
             $res = $this->client->get($uri)->send()->getBody(true);
         } catch (\Guzzle\Http\Exception\RequestException $e) {
             if ($e->getResponse()->getStatusCode() === 404) {
-                throw new EntityNotFoundException('Entity not found');
+                throw new EntityNotFoundException('Entity not found', $e->getCode(), $e);
             }
 
-            throw new RuntimeException('Error while getting the entity', null, $e);
+            throw new RuntimeException('Error while getting the entity', $e->getCode(), $e);
         }
 
         if (null === $entity) {
@@ -335,7 +335,7 @@ class APIClient
         try {
             $res = $this->client->get($uri)->send()->getBody(true);
         } catch (RequestException $e) {
-            throw new RuntimeException(sprintf('Unable to fetch data for %s', $targetEntity));
+            throw new RuntimeException(sprintf('Unable to fetch data for %s', $targetEntity), $e->getCode(), $e);
         }
 
         $data = json_decode($res, true);

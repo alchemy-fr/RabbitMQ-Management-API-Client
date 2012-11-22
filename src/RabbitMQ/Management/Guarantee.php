@@ -25,7 +25,7 @@ class Guarantee
     public function probeExchange(Exchange $exchange)
     {
         try {
-            if ($exchange !== $this->client->getExchange($exchange->vhost, $exchange->name)) {
+            if ($exchange->toJson() !== $this->client->getExchange($exchange->vhost, $exchange->name)->toJson()) {
                 return self::PROBE_MISCONFIGURED;
             } else {
                 return self::PROBE_OK;
@@ -57,7 +57,7 @@ class Guarantee
     public function probeQueue(Queue $queue)
     {
         try {
-            if ($queue !== $this->client->getQueue($queue->vhost, $queue->name)) {
+            if ($queue->toJson() !== $this->client->getQueue($queue->vhost, $queue->name)->toJson()) {
                 return self::PROBE_MISCONFIGURED;
             } else {
                 return self::PROBE_OK;

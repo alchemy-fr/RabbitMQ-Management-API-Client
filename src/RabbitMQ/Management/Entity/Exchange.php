@@ -7,10 +7,10 @@ class Exchange extends AbstractEntity
     public $name;
     public $vhost;
     public $type;
-    public $durable;
-    public $auto_delete;
-    public $internal;
-    public $arguments;
+    public $durable = false;
+    public $auto_delete = false;
+    public $internal = false;
+    public $arguments = array();
 
     protected function getJsonParameters()
     {
