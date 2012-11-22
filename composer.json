@@ -15,8 +15,8 @@
         }
     ],
     "require": {
-        "guzzle/guzzle": "dev-master",
-        "doctrine/common": "dev-master"
+        "guzzle/guzzle": ">=2.8",
+        "doctrine/common": ">=2.0"
     },
     "require-dev": {
         "videlalvaro/php-amqplib": "dev-master",

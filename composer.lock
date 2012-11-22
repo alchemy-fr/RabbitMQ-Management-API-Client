@@ -1,5 +1,5 @@
 {
-    "hash": "a64c64122247cb22b94d012a0756502a",
+    "hash": "52d620254f6d575a17f74dcfd8939a04",
     "packages": [
         {
             "name": "doctrine/common",
@@ -7,18 +7,18 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/common",
-                "reference": "d8c17cd427ff345ebc13193ebbf3a4dee49e44ff"
+                "reference": "a836c86c13e964051549e234250cf665a5f5a190"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/doctrine/common/archive/d8c17cd427ff345ebc13193ebbf3a4dee49e44ff.zip",
-                "reference": "d8c17cd427ff345ebc13193ebbf3a4dee49e44ff",
+                "url": "https://github.com/doctrine/common/archive/a836c86c13e964051549e234250cf665a5f5a190.zip",
+                "reference": "a836c86c13e964051549e234250cf665a5f5a190",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.2"
             },
-            "time": "1353465164",
+            "time": "1353613273",
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -221,22 +221,22 @@
     "packages-dev": [
         {
             "name": "nikic/php-parser",
-            "version": "v0.9.2",
+            "version": "v0.9.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser",
-                "reference": "v0.9.2"
+                "reference": "v0.9.3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/nikic/PHP-Parser/zipball/v0.9.2",
-                "reference": "v0.9.2",
+                "url": "https://github.com/nikic/PHP-Parser/archive/v0.9.3.zip",
+                "reference": "v0.9.3",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.2"
             },
-            "time": "2012-07-07 13:23:25",
+            "time": "2012-11-22 18:54:05",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -245,7 +245,7 @@
                 }
             },
             "license": [
-                "BSD"
+                "BSD-3-Clause"
             ],
             "authors": [
                 {
@@ -683,8 +683,6 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "guzzle/guzzle": 20,
-        "doctrine/common": 20,
         "videlalvaro/php-amqplib": 20,
         "sami/sami": 20
     }
