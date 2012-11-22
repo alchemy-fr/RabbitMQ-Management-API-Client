@@ -55,7 +55,7 @@ Here is a simple way to instantiate the APIClient an retrieve a queue :
 .. code-block:: php
 
     <?php
-    use RabbitMQ\APIClient;
+    use RabbitMQ\Management\APIClient;
 
     $client = APIClient::factory(array('url'=>'localhost'));
 
@@ -87,19 +87,19 @@ Probing a queue
 Let's probe the status of a queue ; the probe will return one of the following
 constants :
 
- - ``RabbitMQ\Guarantee::PROBE_RESULT_OK`` If the probed entity is set up with
+ - ``RabbitMQ\Management\Guarantee::PROBE_RESULT_OK`` If the probed entity is set up with
  correct options
- - ``RabbitMQ\Guarantee::PROBE_RESULT_MISCONFIGURED`` If the probed entity is
+ - ``RabbitMQ\Management\Guarantee::PROBE_RESULT_MISCONFIGURED`` If the probed entity is
  set up with wrong options
- - ``RabbitMQ\Guarantee::PROBE_RESULT__ABSENT`` if the probed entity is absent
+ - ``RabbitMQ\Management\Guarantee::PROBE_RESULT__ABSENT`` if the probed entity is absent
 
 
 .. code-block:: php
 
     <?php
-    use RabbitMQ\APIClient;
-    use RabbitMQ\Entity\Queue;
-    use RabbitMQ\Guarantee;
+    use RabbitMQ\Management\APIClient;
+    use RabbitMQ\Management\Entity\Queue;
+    use RabbitMQ\Management\Guarantee;
 
     $client = APIClient::factory(array('url'=>'localhost'));
     $manager = new Guarantee($client);
@@ -132,7 +132,7 @@ The same is available for exchanges :
 .. code-block:: php
 
     <?php
-    use RabbitMQ\Entity\Exchange;
+    use RabbitMQ\Management\Entity\Exchange;
 
     $exchange = new Exchange();
     $exchange->vhost = '/';
@@ -149,9 +149,9 @@ Let's now ensure a queue is set up as required :
 .. code-block:: php
 
     <?php
-    use RabbitMQ\APIClient;
-    use RabbitMQ\Entity\Queue;
-    use RabbitMQ\Guarantee;
+    use RabbitMQ\Management\APIClient;
+    use RabbitMQ\Management\Entity\Queue;
+    use RabbitMQ\Management\Guarantee;
 
     $client = APIClient::factory(array('url'=>'localhost'));
     $manager = new Guarantee($client);
@@ -177,8 +177,8 @@ Monitor a queue
 .. code-block:: php
 
     <?php
-    use RabbitMQ\Exception\EntityNotFoundException;
-    use RabbitMQ\Entity\Queue;
+    use RabbitMQ\Management\Exception\EntityNotFoundException;
+    use RabbitMQ\Management\Entity\Queue;
 
     try {
         $queue = $client->getQueue('/', 'queue.leuleu');
@@ -195,15 +195,15 @@ Handling Exceptions
 
 RabbitMQ Management API Client throws 4 different types of exception :
 
-- ``RabbitMQ\Exception\EntityNotFoundException`` is thrown when an entity is not
+- ``RabbitMQ\Management\Exception\EntityNotFoundException`` is thrown when an entity is not
   found.
-- ``RabbitMQ\Exception\InvalidArgumentException`` is thrown when an invalid
+- ``RabbitMQ\Management\Exception\InvalidArgumentException`` is thrown when an invalid
   argument (name, vhost, ...) is provided
-- ``RabbitMQ\Exception\PreconditionFailedException`` is thrown when you try to
+- ``RabbitMQ\Management\Exception\PreconditionFailedException`` is thrown when you try to
   add an existing queue/exchange with different parameters (similar to HTTP 406).
-- ``RabbitMQ\Exception\RuntimeException`` which extends SPL RuntimeException
+- ``RabbitMQ\Management\Exception\RuntimeException`` which extends SPL RuntimeException
 
-All these Exception implements ``RabbitMQ\Exception\ExceptionInterface`` so you can catch
+All these Exception implements ``RabbitMQ\Management\Exception\ExceptionInterface`` so you can catch
 any of these exceptions by catching this exception interface.
 
 Report a bug

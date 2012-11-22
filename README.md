@@ -9,9 +9,9 @@ This library is intended to help management of RabbitMQ server in an application
 Ensure a queue has a flag :
 
 ```php
-use RabbitMQ\APIClient;
-use RabbitMQ\Entity\Queue;
-use RabbitMQ\Exception\EntityNotFoundException;
+use RabbitMQ\Management\APIClient;
+use RabbitMQ\Management\Entity\Queue;
+use RabbitMQ\Management\Exception\EntityNotFoundException;
 
 $client = APIClient::factory(array('url'=>'localhost'));
 
@@ -38,9 +38,9 @@ try {
 You can also use the Guarantee manager :
 
 ```php
-use RabbitMQ\APIClient;
-use RabbitMQ\Entity\Queue;
-use RabbitMQ\Guarantee;
+use RabbitMQ\Management\APIClient;
+use RabbitMQ\Management\Entity\Queue;
+use RabbitMQ\Management\Guarantee;
 
 $client = APIClient::factory(array('url'=>'localhost'));
 $manager = new Guarantee($client);
