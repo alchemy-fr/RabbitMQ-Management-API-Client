@@ -4,3 +4,4 @@
 /vendor
 composer.phar
 /tests/phpunit_report
+/docs/source/API/API/cache/
