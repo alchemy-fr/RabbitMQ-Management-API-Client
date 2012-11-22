@@ -345,11 +345,14 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->client->addQueue($queue);
 
         $binding = new Binding();
+        $binding->vhost = '/';
+        $binding->source = 'test.exchange';
+        $binding->destination = 'test.queue';
         $binding->routing_key = 'special.routing.key';
 
-        $this->client->addBinding('/', 'test.exchange', 'test.queue', $binding);
+        $this->client->addBinding($binding);
 
-        $status = $this->object->probeBinding('/', 'test.exchange', 'test.queue', 'special.routing.key');
+        $status = $this->object->probeBinding($binding);
 
         $this->client->deleteExchange($exchange->vhost, $exchange->name);
         $this->client->deleteQueue($queue->vhost, $queue->name);
@@ -371,7 +374,13 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->client->addExchange($exchange);
         $this->client->addQueue($queue);
 
-        $status = $this->object->probeBinding('/', 'test.exchange', 'test.queue', 'special.routing.key');
+        $binding = new Binding();
+        $binding->vhost = '/';
+        $binding->source = 'test.exchange';
+        $binding->destination = 'test.queue';
+        $binding->routing_key = 'special.routing.key';
+
+        $status = $this->object->probeBinding($binding);
 
         $this->client->deleteExchange($exchange->vhost, $exchange->name);
         $this->client->deleteQueue($queue->vhost, $queue->name);
@@ -394,12 +403,15 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->client->addQueue($queue);
 
         $binding = new Binding();
+        $binding->vhost = '/';
+        $binding->source = 'test.exchange';
+        $binding->destination = 'test.queue';
         $binding->routing_key = 'special.routing.key';
         $binding->arguments = array('bim', 'boum');
 
-        $this->client->addBinding('/', 'test.exchange', 'test.queue', $binding);
-        
-        $status = $this->object->probeBinding('/', 'test.exchange', 'test.queue', 'special.routing.key', array('pif' => 'pouf'));
+        $this->client->addBinding($binding);
+
+        $status = $this->object->probeBinding($binding);
 
         $this->client->deleteExchange($exchange->vhost, $exchange->name);
         $this->client->deleteQueue($queue->vhost, $queue->name);
@@ -424,7 +436,13 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->client->addExchange($exchange);
         $this->client->addQueue($queue);
 
-        $this->object->ensureBinding('/', 'test.exchange', 'test.queue', 'special.routing.key');
+        $binding = new Binding();
+        $binding->vhost = '/';
+        $binding->source = 'test.exchange';
+        $binding->destination = 'test.queue';
+        $binding->routing_key = 'special.routing.key';
+
+        $this->object->ensureBinding($binding);
 
         $found = false;
 
@@ -461,11 +479,14 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->client->addQueue($queue);
 
         $binding = new Binding();
+        $binding->vhost = '/';
+        $binding->source = 'test.exchange';
+        $binding->destination = 'test.queue';
         $binding->routing_key = 'special.routing.key';
 
-        $this->client->addBinding('/', 'test.exchange', 'test.queue', $binding);
+        $this->client->addBinding($binding);
 
-        $this->object->ensureBinding('/', 'test.exchange', 'test.queue', 'special.routing.key');
+        $this->object->ensureBinding($binding);
 
         $found = false;
 

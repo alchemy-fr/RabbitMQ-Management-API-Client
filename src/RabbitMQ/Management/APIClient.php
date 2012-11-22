@@ -256,9 +256,9 @@ class APIClient
         return $this->retrieveCollection($uri, 'RabbitMQ\Management\Entity\Binding');
     }
 
-    public function addBinding($vhost, $exchange, $queue, Binding $binding)
+    public function addBinding(Binding $binding)
     {
-        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', urlencode($vhost), urlencode($exchange), urlencode($queue));
+        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', urlencode($binding->vhost), urlencode($binding->source), urlencode($binding->destination));
 
         try {
             $this->client->post($uri, array('Content-type' => 'application/json'), $binding->toJson())->send();

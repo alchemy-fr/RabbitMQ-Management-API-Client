@@ -439,11 +439,14 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->addExchange($exchange);
 
         $binding = new Binding();
+        $binding->vhost = '/';
+        $binding->source = self::EXCHANGE_TEST_NAME;
+        $binding->destination = self::QUEUE_TEST_NAME;
         $binding->destination_type = 'direct';
         $binding->routing_key = 'rounting.key';
         $binding->arguments = array('bim' => 'boom');
 
-        $this->object->addBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
+        $this->object->addBinding($binding);
 
         $found = false;
 
@@ -467,8 +470,10 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
     {
         $binding = new Binding();
         $binding->vhost = '/';
+        $binding->source = self::EXCHANGE_TEST_NAME;
+        $binding->destination = self::QUEUE_TEST_NAME;
 
-        $this->object->addBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
+        $this->object->addBinding($binding);
     }
 
     public function testDeleteBinding()
@@ -509,12 +514,12 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->addExchange($exchange);
 
         $binding = new Binding();
-        $binding->destination_type = 'direct';
+        $binding->vhost = '/';
+        $binding->source = self::EXCHANGE_TEST_NAME;
         $binding->destination = self::QUEUE_TEST_NAME;
         $binding->routing_key = 'rounting.key';
-        $binding->vhost = '/';
 
-        $this->object->addBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
+        $this->object->addBinding($binding);
     }
 
     /**
@@ -575,12 +580,12 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->addExchange($exchange);
 
         $binding = new Binding();
-        $binding->destination_type = 'direct';
+        $binding->vhost = '/';
+        $binding->source = self::EXCHANGE_TEST_NAME;
         $binding->destination = self::QUEUE_TEST_NAME;
         $binding->routing_key = self::QUEUE_TEST_NAME;
-        $binding->vhost = '/';
 
-        $this->object->addBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
+        $this->object->addBinding($binding);
 
         $message = json_encode(array(
             'properties' => array(),

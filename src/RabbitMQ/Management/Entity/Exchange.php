@@ -14,6 +14,6 @@ class Exchange extends AbstractEntity
 
     protected function getJsonParameters()
     {
-        return array('type', 'auto_delete', 'durable', 'internal', 'arguments');
+        return array('type', 'auto_delete', 'durable', 'internal', 'arguments', 'vhost', 'name');
     }
 }

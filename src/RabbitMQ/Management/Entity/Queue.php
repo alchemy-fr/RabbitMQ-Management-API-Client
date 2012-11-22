@@ -33,6 +33,6 @@ class Queue extends AbstractEntity
 
     protected function getJsonParameters()
     {
-        return array('auto_delete', 'durable', 'arguments');
+        return array('auto_delete', 'durable', 'arguments', 'vhost', 'name');
     }
 }

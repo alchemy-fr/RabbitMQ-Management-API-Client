@@ -86,13 +86,13 @@ class Guarantee
         }
     }
 
-    public function probeBinding($vhost, $exchange, $queue, $routing_key, array $arguments = array())
+    public function probeBinding(Binding $binding)
     {
-        $bindings = $this->client->listBindingsByExchangeAndQueue($vhost, $exchange, $queue);
+        $bindings = $this->client->listBindingsByExchangeAndQueue($binding->vhost, $binding->source, $binding->destination);
         $retval = self::PROBE_ABSENT;
 
-        foreach ($bindings as $binding) {
-            if ($routing_key === $binding->routing_key && $arguments === $binding->arguments) {
+        foreach ($bindings as $foundBinding) {
+            if ($binding->toJson() === $foundBinding->toJson()) {
                 $retval = self::PROBE_OK;
                 break;
             }
@@ -101,27 +101,10 @@ class Guarantee
         return $retval;
     }
 
-    public function ensureBinding($vhost, $exchange, $queue, $routing_key = '', array $arguments = array())
+    public function ensureBinding(Binding $binding)
     {
-        if (self::PROBE_OK !== $this->probeBinding($vhost, $exchange, $queue, $routing_key, $arguments)) {
-            $binding = $this->setProperties(new Binding(), array(
-                'vhost'       => $vhost,
-                'routing_key' => $routing_key,
-                'arguments'   => $arguments,
-            ));
-
-            $this->client->addBinding($vhost, $exchange, $queue, $binding);
+        if (self::PROBE_OK !== $this->probeBinding($binding)) {
+            $this->client->addBinding($binding);
         }
-    }
-
-    private function setProperties(EntityInterface $entity, array $properties)
-    {
-        foreach ($properties as $key => $value) {
-            if ($value !== $entity->{$key}) {
-                $entity->{$key} = $value;
-            }
-        }
-
-        return $entity;
     }
 }

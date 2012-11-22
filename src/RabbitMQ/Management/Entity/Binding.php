@@ -9,11 +9,11 @@ class Binding extends AbstractEntity
     public $destination;
     public $destination_type;
     public $routing_key;
-    public $arguments;
+    public $arguments = array();
     public $properties_key;
 
     protected function getJsonParameters()
     {
-        return array('routing_key', 'arguments');
+        return array('routing_key', 'arguments', 'vhost', 'source', 'destination');
     }
 }
