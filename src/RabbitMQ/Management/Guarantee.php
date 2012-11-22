@@ -86,19 +86,24 @@ class Guarantee
         }
     }
 
-    public function ensureBinding($vhost, $exchange, $queue, $routing_key = '', array $arguments = array())
+    public function probeBinding($vhost, $exchange, $queue, $routing_key, array $arguments = array())
     {
         $bindings = $this->client->listBindingsByExchangeAndQueue($vhost, $exchange, $queue);
-        $found = false;
+        $retval = self::PROBE_ABSENT;
 
         foreach ($bindings as $binding) {
-            if ($routing_key === $binding->routing_key) {
-                $found = true;
+            if ($routing_key === $binding->routing_key && $arguments === $binding->arguments) {
+                $retval = self::PROBE_OK;
                 break;
             }
         }
 
-        if (!$found) {
+        return $retval;
+    }
+
+    public function ensureBinding($vhost, $exchange, $queue, $routing_key = '', array $arguments = array())
+    {
+        if (self::PROBE_OK !== $this->probeBinding($vhost, $exchange, $queue, $routing_key, $arguments)) {
             $binding = $this->setProperties(new Binding(), array(
                 'vhost'       => $vhost,
                 'routing_key' => $routing_key,

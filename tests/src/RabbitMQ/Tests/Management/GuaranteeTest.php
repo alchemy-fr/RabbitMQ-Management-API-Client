@@ -330,6 +330,83 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
         $this->client->deleteQueue($queue->vhost, $queue->name);
     }
 
+    public function testProbeBindingThatDoesExist()
+    {
+        $exchange = new Exchange();
+        $exchange->type = 'fanout';
+        $exchange->vhost = '/';
+        $exchange->name = 'test.exchange';
+
+        $queue = new Queue();
+        $queue->name = 'test.queue';
+        $queue->vhost = '/';
+
+        $this->client->addExchange($exchange);
+        $this->client->addQueue($queue);
+
+        $binding = new Binding();
+        $binding->routing_key = 'special.routing.key';
+
+        $this->client->addBinding('/', 'test.exchange', 'test.queue', $binding);
+
+        $status = $this->object->probeBinding('/', 'test.exchange', 'test.queue', 'special.routing.key');
+
+        $this->client->deleteExchange($exchange->vhost, $exchange->name);
+        $this->client->deleteQueue($queue->vhost, $queue->name);
+
+        $this->assertEquals(Guarantee::PROBE_OK, $status);
+    }
+
+    public function testProbeBindingThatDoesNotExist()
+    {
+        $exchange = new Exchange();
+        $exchange->type = 'fanout';
+        $exchange->vhost = '/';
+        $exchange->name = 'test.exchange';
+
+        $queue = new Queue();
+        $queue->name = 'test.queue';
+        $queue->vhost = '/';
+
+        $this->client->addExchange($exchange);
+        $this->client->addQueue($queue);
+
+        $status = $this->object->probeBinding('/', 'test.exchange', 'test.queue', 'special.routing.key');
+
+        $this->client->deleteExchange($exchange->vhost, $exchange->name);
+        $this->client->deleteQueue($queue->vhost, $queue->name);
+
+        $this->assertEquals(Guarantee::PROBE_ABSENT, $status);
+    }
+
+    public function testProbeBindingThatDoesExistWithDifferentArguments()
+    {
+        $exchange = new Exchange();
+        $exchange->type = 'fanout';
+        $exchange->vhost = '/';
+        $exchange->name = 'test.exchange';
+
+        $queue = new Queue();
+        $queue->name = 'test.queue';
+        $queue->vhost = '/';
+
+        $this->client->addExchange($exchange);
+        $this->client->addQueue($queue);
+
+        $binding = new Binding();
+        $binding->routing_key = 'special.routing.key';
+        $binding->arguments = array('bim', 'boum');
+
+        $this->client->addBinding('/', 'test.exchange', 'test.queue', $binding);
+        
+        $status = $this->object->probeBinding('/', 'test.exchange', 'test.queue', 'special.routing.key', array('pif' => 'pouf'));
+
+        $this->client->deleteExchange($exchange->vhost, $exchange->name);
+        $this->client->deleteQueue($queue->vhost, $queue->name);
+
+        $this->assertEquals(Guarantee::PROBE_ABSENT, $status);
+    }
+
     /**
      * @covers RabbitMQ\Management\Guarantee::ensureBinding
      */

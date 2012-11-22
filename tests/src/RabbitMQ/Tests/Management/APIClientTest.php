@@ -440,16 +440,15 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
         $binding = new Binding();
         $binding->destination_type = 'direct';
-        $binding->destination = self::QUEUE_TEST_NAME;
         $binding->routing_key = 'rounting.key';
-        $binding->vhost = '/';
+        $binding->arguments = array('bim' => 'boom');
 
         $this->object->addBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
 
         $found = false;
 
         foreach ($this->object->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME) as $binding) {
-            if ($binding->routing_key == 'rounting.key') {
+            if ($binding->routing_key === 'rounting.key' && $binding->arguments === array('bim' => 'boom')) {
                 $found = $binding;
             }
         }
