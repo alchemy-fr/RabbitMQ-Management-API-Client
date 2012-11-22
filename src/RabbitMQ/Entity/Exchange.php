@@ -11,4 +11,9 @@ class Exchange extends AbstractEntity
     public $auto_delete;
     public $internal;
     public $arguments;
+
+    protected function getJsonParameters()
+    {
+        return array('type', 'auto_delete', 'durable', 'internal', 'arguments');
+    }
 }

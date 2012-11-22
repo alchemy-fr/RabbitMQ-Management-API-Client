@@ -50,7 +50,7 @@ you will find help on their  website
 Basic Usage
 -----------
 
-Here is a simple way to instantiate the APIClient :
+Here is a simple way to instantiate the APIClient an retrieve a queue :
 
 .. code-block:: php
 
@@ -58,6 +58,8 @@ Here is a simple way to instantiate the APIClient :
     use RabbitMQ\APIClient;
 
     $client = APIClient::factory(array('url'=>'localhost'));
+
+    $queue = $client->getQueue('/', 'queue.leuleu');
 
 The APIClient factory requires the url option to build. Other available options
 are :
@@ -67,10 +69,41 @@ are :
  - username : The username to connect to the API endpoint (default to 'guest')
  - password : The password to connect to the API endpoint (default to 'guest')
 
+For all available methods, it is recommended to browse the API.
+
+Guarantees
+----------
+
+What you probably want to do with this library is to ensure the RabbitMQ
+queues, exchanges and bindings settings. This can be easily done with the
+``Guarantee`` Component.
+
+``Guarantee`` will look in the configuration to find if what you ask for is
+already correctly set up and fix it, if it is not.
+
+.. code-block:: php
+
+    <?php
+    use RabbitMQ\APIClient;
+    use RabbitMQ\Entity\Queue;
+    use RabbitMQ\Guarantee;
+
+    $client = APIClient::factory(array('url'=>'localhost'));
+    $manager = new Guarantee($client);
+
+    $queue = new Queue();
+    $queue->vhost = '/';
+    $queue->name = 'queue.leuleu';
+    $queue->durable = true;
+    $queue->auto_delete = false;
+
+    $manager->ensureQueue($queue);
+
 Recipes
 -------
 
-These recipes are samples of code you could re-use.
+These recipes are samples of code you could re-use. Most of these are about
+guarantees that are also provided by the ``Guarantee`` component.
 
 Ensure a queue is set up with correct options
 +++++++++++++++++++++++++++++++++++++++++++++

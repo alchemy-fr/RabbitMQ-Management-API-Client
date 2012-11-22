@@ -116,6 +116,13 @@ class APIClient
         return $this;
     }
 
+    public function refreshExchange(Exchange $exchange)
+    {
+        $uri = sprintf('/api/exchange/%s/%s', urlencode($exchange->vhost), urlencode($exchange->name));
+
+        return $this->retrieveEntity($uri, 'RabbitMQ\Entity\Exchange', $exchange);
+    }
+
     public function addExchange(Exchange $exchange)
     {
         if (!$exchange->vhost) {
@@ -133,10 +140,10 @@ class APIClient
         } catch (RequestException $e) {
             if ($data = json_decode($e->getResponse()->getBody(true), true)) {
                 if (isset($data['reason']) && strpos($data['reason'], '406 PRECONDITION_FAILED') === 0) {
-                    throw new PreconditionFailedException('Exchange already exists with different properties');
+                    throw new PreconditionFailedException('Exchange already exists with different properties', $e->getCode(), $e);
                 }
             }
-            throw new RuntimeException('Unable to put the exchange');
+            throw new RuntimeException('Unable to put the exchange', $e->getCode(), $e);
         }
 
         return $this->getExchange($exchange->vhost, $exchange->name, $exchange);
@@ -184,10 +191,10 @@ class APIClient
         } catch (RequestException $e) {
             if ($data = json_decode($e->getResponse()->getBody(true), true)) {
                 if (isset($data['reason']) && strpos($data['reason'], '406 PRECONDITION_FAILED') === 0) {
-                    throw new PreconditionFailedException('Queue already exists with different properties');
+                    throw new PreconditionFailedException('Queue already exists with different properties', $e->getCode(), $e);
                 }
             }
-            throw new RuntimeException('Unable to put the exchange');
+            throw new RuntimeException('Unable to put the queue', $e->getCode(), $e);
         }
 
         return $this->getQueue($queue->vhost, $queue->name, $queue);
@@ -256,7 +263,7 @@ class APIClient
         try {
             $this->client->post($uri, array('Content-type' => 'application/json'), $binding->toJson())->send();
         } catch (RequestException $e) {
-            throw new RuntimeException('Unable to add binding');
+            throw new RuntimeException('Unable to add binding', $e->getCode(), $e);
         }
 
         return $this;

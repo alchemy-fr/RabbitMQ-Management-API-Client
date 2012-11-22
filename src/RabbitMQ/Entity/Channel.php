@@ -21,4 +21,9 @@ class Channel extends AbstractEntity
     public $number;
     public $user;
     public $vhost;
+
+    protected function getJsonParameters()
+    {
+        return array();
+    }
 }

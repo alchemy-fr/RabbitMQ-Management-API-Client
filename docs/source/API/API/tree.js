@@ -14,6 +14,7 @@ var tree = [["RabbitMQ","RabbitMQ.html","",
                 [        ]],["PreconditionFailedException","RabbitMQ\/Exception\/PreconditionFailedException.html"," < InvalidArgumentException",
                 [        ]],["RuntimeException","RabbitMQ\/Exception\/RuntimeException.html"," < RuntimeException",
                 [        ]]        ]],["APIClient","RabbitMQ\/APIClient.html","",
+                [        ]],["Guarantee","RabbitMQ\/Guarantee.html","",
                 [        ]],["HttpClient","RabbitMQ\/HttpClient.html"," < Client",
                 [        ]],["Hydrator","RabbitMQ\/Hydrator.html","",
                 [        ]]        ]]        ]

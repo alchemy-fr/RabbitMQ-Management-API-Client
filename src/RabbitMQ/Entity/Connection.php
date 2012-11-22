@@ -37,4 +37,9 @@ class Connection extends AbstractEntity
     public $timeout;
     public $frame_max;
     public $client_properties;
+
+    protected function getJsonParameters()
+    {
+        return array();
+    }
 }

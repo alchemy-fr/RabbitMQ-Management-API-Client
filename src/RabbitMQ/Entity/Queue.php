@@ -9,6 +9,7 @@ class Queue extends AbstractEntity
     public $durable;
     public $name;
     public $vhost;
+
     public $node;
     public $messages_unacknowledged_details;
     public $messages_ready_details;
@@ -28,5 +29,10 @@ class Queue extends AbstractEntity
     public function getBindings()
     {
         $this->APIClient->listBindingsByQueue($this);
+    }
+
+    protected function getJsonParameters()
+    {
+        return array('auto_delete', 'durable', 'arguments');
     }
 }

@@ -35,9 +35,24 @@ try {
 }
 ```
 
-# Todo
+You can also use the Guarantee manager :
 
- - Add guarantee constraints
+```php
+use RabbitMQ\APIClient;
+use RabbitMQ\Entity\Queue;
+use RabbitMQ\Guarantee;
+
+$client = APIClient::factory(array('url'=>'localhost'));
+$manager = new Guarantee($client);
+
+$queue = new Queue();
+$queue->vhost = '/';
+$queue->name = 'queue.leuleu';
+$queue->durable = true;
+$queue->auto_delete = false;
+
+$queue = $manager->ensureQueue($queue);
+```
 
 # API Browser
 

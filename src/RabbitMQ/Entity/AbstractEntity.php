@@ -20,8 +20,10 @@ abstract class AbstractEntity implements EntityInterface
     {
         $data = array();
 
+        $parameters = $this->getJsonParameters();
+
         foreach ($this as $key => $value) {
-            if ($key === 'APIClient') {
+            if (!in_array($key, $parameters)) {
                 continue;
             }
             if (null === $value) {
@@ -31,6 +33,8 @@ abstract class AbstractEntity implements EntityInterface
             $data[$key] = $value;
         }
 
-        return json_encode($data);
+        return json_encode((object) $data);
     }
+
+    abstract protected function getJsonParameters();
 }
