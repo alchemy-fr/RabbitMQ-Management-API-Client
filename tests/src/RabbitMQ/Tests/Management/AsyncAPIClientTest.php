@@ -11,7 +11,7 @@ use RabbitMQ\Management\Entity\Exchange;
 use RabbitMQ\Management\Entity\Queue;
 use RabbitMQ\Management\Entity\Binding;
 
-class APIClientTest extends \PHPUnit_Framework_TestCase
+class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
 {
     const EXCHANGE_TEST_NAME = 'phrasea.baloo';
     const QUEUE_TEST_NAME = 'phrasea.queue.baloo';
