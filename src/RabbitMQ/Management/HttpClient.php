@@ -4,6 +4,7 @@ namespace RabbitMQ\Management;
 
 use Guzzle\Common\Collection;
 use Guzzle\Service\Client;
+use RabbitMQ\Management\Exception\RuntimeException;
 
 class HttpClient extends Client
 {
@@ -28,11 +29,11 @@ class HttpClient extends Client
      * - username: API username
      * - password: API password
      *
-     * @param array|Collection $config Configuration data
+     * @param array|Collection $options Configuration data
      *
      * @return self
      */
-    public static function factory($config = array())
+    public static function factory($options = array())
     {
         $default = array(
             'base_url' => '{scheme}://{username}:{password}@{url}:{port}',
@@ -42,9 +43,16 @@ class HttpClient extends Client
             'port'     => '55672',
         );
 
+        $options = array_merge($default, $options);
         $required = array('port', 'url', 'username', 'password');
-        $config = Collection::fromConfig($config, $default, $required);
 
+        foreach ($required as $key) {
+            if (!array_key_exists($key, $options)) {
+                throw new RuntimeException(sprintf('Missing option `%s`', $key));
+            }
+        }
+
+        $config = new Collection($options);
         $client = new self($config->get('base_url'), $config);
 
         return $client;
