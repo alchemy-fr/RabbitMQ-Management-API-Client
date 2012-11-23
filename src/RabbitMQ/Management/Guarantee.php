@@ -2,7 +2,6 @@
 
 namespace RabbitMQ\Management;
 
-use RabbitMQ\Management\Entity\EntityInterface;
 use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Entity\Exchange;
 use RabbitMQ\Management\Entity\Queue;

@@ -315,7 +315,7 @@ class APIClient
     {
         try {
             $res = $this->client->get($uri)->send()->getBody(true);
-        } catch (\Guzzle\Http\Exception\RequestException $e) {
+        } catch (RequestException $e) {
             if ($e->getResponse()->getStatusCode() === 404) {
                 throw new EntityNotFoundException('Entity not found', $e->getCode(), $e);
             }
