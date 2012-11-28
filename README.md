@@ -3,8 +3,40 @@
 [![Build Status](https://secure.travis-ci.org/alchemy-fr/RabbitMQ-Management-API-Client.png?branch=master)](https://travis-ci.org/alchemy-fr/RabbitMQ-Management-API-Client)
 
 This library is intended to help management of RabbitMQ server in an application.
+It provides two ways to query RabbitMQ : Synchronous query with Guzzle and
+Asynchronous query with React.
 
-# Example of use :
+## Asynchronous Queries
+
+```php
+
+use RabbitMQ\Management\AsyncAPIClient;
+use React\EventLoop\Factory;
+
+$loop = Factory::create();
+
+$client = AsyncAPIClient::factory($loop, array(
+    'url'      => '127.0.0.1',
+));
+
+$loop->addPeriodicTimer(1, function () use ($client) {
+    $client->listQueues()
+        ->then(function($queues) {
+            echo "\n------------\n";
+            foreach ($queues as $queue) {
+                echo sprintf("Found queue %s with %d messages\n", $queue->name, $queue->messages);
+            }
+        }, function ($error) {
+            echo "An error occured : $error\n";
+        });
+});
+
+$loop->run();
+```
+
+Asynchronous Client do not currently support Guarantee API.
+
+## Synchronous Queries
 
 Ensure a queue has a flag :
 
