@@ -11,6 +11,8 @@ class Queue extends AbstractEntity
     public $vhost;
 
     public $node;
+    public $policy;
+    public $active_consumers;
     public $messages_unacknowledged_details;
     public $messages_ready_details;
     public $messages_details;

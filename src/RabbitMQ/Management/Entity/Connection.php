@@ -4,6 +4,8 @@ namespace RabbitMQ\Management\Entity;
 
 class Connection extends AbstractEntity
 {
+    public $host;
+    public $peer_host;
     public $recv_oct;
     public $recv_oct_details;
     public $recv_cnt;
