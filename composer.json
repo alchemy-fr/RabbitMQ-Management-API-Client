@@ -15,7 +15,10 @@
         }
     ],
     "require": {
-        "guzzle/guzzle": ">=2.8",
+        "guzzle/guzzle": "2.8.*",
+        "react/promise": "1.0.*",
+        "react/react": "0.2.*",
+        "react/curry": "1.0.*",
         "doctrine/common": ">=2.0"
     },
     "require-dev": {
