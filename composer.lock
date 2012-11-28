@@ -1,5 +1,5 @@
 {
-    "hash": "dbb451f34a42acfced065a62d1c1e214",
+    "hash": "ac51e196444fa61fbea222c9dff62f1e",
     "packages": [
         {
             "name": "doctrine/common",
@@ -117,16 +117,16 @@
         },
         {
             "name": "guzzle/guzzle",
-            "version": "v2.8.8",
+            "version": "v3.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle",
-                "reference": "v2.8.8"
+                "reference": "v3.0.5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/guzzle/guzzle/zipball/v2.8.8",
-                "reference": "v2.8.8",
+                "url": "https://github.com/guzzle/guzzle/archive/v3.0.5.zip",
+                "reference": "v3.0.5",
                 "shasum": ""
             },
             "require": {
@@ -135,24 +135,39 @@
                 "symfony/event-dispatcher": "2.1.*"
             },
             "replace": {
+                "guzzle/batch": "self.version",
+                "guzzle/cache": "self.version",
                 "guzzle/common": "self.version",
                 "guzzle/http": "self.version",
-                "guzzle/parser": "self.version"
+                "guzzle/inflection": "self.version",
+                "guzzle/iterator": "self.version",
+                "guzzle/log": "self.version",
+                "guzzle/parser": "self.version",
+                "guzzle/plugin": "self.version",
+                "guzzle/plugin-async": "self.version",
+                "guzzle/plugin-backoff": "self.version",
+                "guzzle/plugin-cache": "self.version",
+                "guzzle/plugin-cookie": "self.version",
+                "guzzle/plugin-curlauth": "self.version",
+                "guzzle/plugin-history": "self.version",
+                "guzzle/plugin-log": "self.version",
+                "guzzle/plugin-md5": "self.version",
+                "guzzle/plugin-mock": "self.version",
+                "guzzle/plugin-oauth": "self.version",
+                "guzzle/service": "self.version",
+                "guzzle/stream": "self.version"
             },
             "require-dev": {
                 "doctrine/common": "*",
                 "symfony/class-loader": "*",
                 "monolog/monolog": "1.*",
-                "zendframework/zend-cache": "2.0.0beta4",
-                "zendframework/zend-log": "2.0.0beta4",
-                "zendframework/zend-loader": "2.0.0beta4",
-                "zendframework/zend-stdlib": "2.0.0beta4",
-                "zendframework/zend-eventmanager": "2.0.0beta4",
-                "zendframework/zend-servicemanager": "2.0.0beta4",
+                "zendframework/zend-cache": "2.0.*",
+                "zendframework/zend-log": "2.0.*",
                 "zend/zend-log1": "1.12",
-                "zend/zend-cache1": "1.12"
+                "zend/zend-cache1": "1.12",
+                "phpunit/phpunit": "3.7.*"
             },
-            "time": "2012-10-15 17:25:16",
+            "time": "2012-11-19 00:15:33",
             "type": "library",
             "installation-source": "source",
             "autoload": {
@@ -276,19 +291,20 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/react",
-                "reference": "24ac0ba4b598e3aeeff57a47232fb4605d34ace5"
+                "reference": "v0.2.5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/reactphp/react/archive/24ac0ba4b598e3aeeff57a47232fb4605d34ace5.zip",
-                "reference": "24ac0ba4b598e3aeeff57a47232fb4605d34ace5",
+                "url": "https://github.com/reactphp/react/archive/v0.2.5.zip",
+                "reference": "v0.2.5",
                 "shasum": ""
             },
             "require": {
                 "evenement/evenement": "1.0.*",
                 "php": ">=5.3.3",
-                "guzzle/http": "2.8.*",
-                "guzzle/parser": "2.8.*"
+                "guzzle/http": "3.0.*",
+                "guzzle/parser": "3.0.*",
+                "react/promise": "1.0.*"
             },
             "replace": {
                 "react/event-loop": "self.version",
@@ -298,7 +314,11 @@
                 "react/dns": "self.version",
                 "react/http-client": "self.version"
             },
-            "time": "1352337134",
+            "require-dev": {
+                "ext-libevent": "*",
+                "ext-libev": "*"
+            },
+            "time": "1353897994",
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -753,18 +773,18 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/fabpot/Twig.git",
-                "reference": "9b75e2c7ae51b66fd4bb2ffbf1d2f28a8604e8f6"
+                "reference": "b58df0e1ae4b664f561bfaeffdb673829daa6b79"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/fabpot/Twig/archive/9b75e2c7ae51b66fd4bb2ffbf1d2f28a8604e8f6.zip",
-                "reference": "9b75e2c7ae51b66fd4bb2ffbf1d2f28a8604e8f6",
+                "url": "https://github.com/fabpot/Twig/archive/b58df0e1ae4b664f561bfaeffdb673829daa6b79.zip",
+                "reference": "b58df0e1ae4b664f561bfaeffdb673829daa6b79",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.2.4"
             },
-            "time": "1353308798",
+            "time": "1353925549",
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -802,18 +822,18 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/videlalvaro/php-amqplib.git",
-                "reference": "237870120238f37d66703583ca0e186b4567b1a9"
+                "reference": "bdf9f66dd918ffbb314c7ea0f810a39dcb25942e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/videlalvaro/php-amqplib/archive/237870120238f37d66703583ca0e186b4567b1a9.zip",
-                "reference": "237870120238f37d66703583ca0e186b4567b1a9",
+                "url": "https://github.com/videlalvaro/php-amqplib/archive/bdf9f66dd918ffbb314c7ea0f810a39dcb25942e.zip",
+                "reference": "bdf9f66dd918ffbb314c7ea0f810a39dcb25942e",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.0"
             },
-            "time": "1351776374",
+            "time": "1354109121",
             "type": "library",
             "installation-source": "source",
             "autoload": {

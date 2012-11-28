@@ -43,16 +43,9 @@ class HttpClient extends Client
             'port'     => '55672',
         );
 
-        $options = array_merge($default, $options);
-        $required = array('port', 'url', 'username', 'password');
+        $required = array('username', 'password', 'base_url');
+        $config = Collection::fromConfig($options, $default, $required);
 
-        foreach ($required as $key) {
-            if (!array_key_exists($key, $options)) {
-                throw new RuntimeException(sprintf('Missing option `%s`', $key));
-            }
-        }
-
-        $config = new Collection($options);
         $client = new self($config->get('base_url'), $config);
 
         return $client;
