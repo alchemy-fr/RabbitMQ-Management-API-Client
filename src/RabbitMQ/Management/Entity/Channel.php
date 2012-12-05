@@ -13,7 +13,9 @@ class Channel extends AbstractEntity
     public $messages_unacknowledged;
     public $messages_unconfirmed;
     public $messages_uncommitted;
+    public $message_stats;
     public $acks_uncommitted;
+    public $publishes;
     public $prefetch_count;
     public $client_flow_blocked;
     public $node;

@@ -36,14 +36,14 @@ class HttpClient extends Client
     public static function factory($options = array())
     {
         $default = array(
-            'base_url' => '{scheme}://{username}:{password}@{url}:{port}',
+            'base_url' => '{scheme}://{username}:{password}@{host}:{port}',
             'scheme'   => 'http',
             'username' => 'guest',
             'password' => 'guest',
             'port'     => '55672',
         );
 
-        $required = array('username', 'password', 'base_url');
+        $required = array('username', 'password', 'host', 'base_url');
         $config = Collection::fromConfig($options, $default, $required);
 
         $client = new self($config->get('base_url'), $config);

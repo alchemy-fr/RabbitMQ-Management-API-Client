@@ -39,9 +39,9 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
     protected function setUp()
     {
         $this->loop = \React\EventLoop\Factory::create();
-        $this->object = AsyncAPIClient::factory($this->loop, array('url'             => '127.0.0.1'));
+        $this->object = AsyncAPIClient::factory($this->loop, array('host'             => '127.0.0.1'));
 
-        $this->syncClientClient = HttpClient::factory(array('url'         => 'localhost'));
+        $this->syncClientClient = HttpClient::factory(array('host'         => 'localhost'));
         $this->syncClient = new APIClient($this->syncClientClient);
 
         $this->conn = new \PhpAmqpLib\Connection\AMQPConnection('localhost', 5672, 'guest', 'guest', '/');

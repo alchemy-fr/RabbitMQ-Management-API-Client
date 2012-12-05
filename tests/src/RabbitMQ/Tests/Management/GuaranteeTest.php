@@ -23,7 +23,7 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->client = APIClient::factory(array('url' => 'localhost'));
+        $this->client = APIClient::factory(array('host' => 'localhost'));
         $this->object = new Guarantee($this->client);
     }
 
