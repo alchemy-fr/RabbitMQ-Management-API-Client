@@ -7,6 +7,8 @@ class Exchange extends AbstractEntity
     public $name;
     public $vhost;
     public $type;
+    public $incoming;
+    public $message_stats_in;
     public $durable = false;
     public $auto_delete = false;
     public $internal = false;
