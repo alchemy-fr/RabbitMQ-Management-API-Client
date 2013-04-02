@@ -30,7 +30,7 @@ class AsyncAPIClient
     public static function factory($loop, array $options = array())
     {
         $defaultOptions = array(
-            'port'     => 55672,
+            'port'     => 15672,
             'user'     => 'guest',
             'password' => 'guest',
             'scheme'   => 'http',

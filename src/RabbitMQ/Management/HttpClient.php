@@ -40,7 +40,7 @@ class HttpClient extends Client
             'scheme'   => 'http',
             'username' => 'guest',
             'password' => 'guest',
-            'port'     => '55672',
+            'port'     => '15672',
         );
 
         $required = array('username', 'password', 'host', 'base_url');
