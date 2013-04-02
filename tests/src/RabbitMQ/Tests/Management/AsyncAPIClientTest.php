@@ -177,7 +177,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                 $PHPUnit->assertNonEmptyArrayCollection($exchanges);
                 foreach ($exchanges as $exchange) {
                     $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
-                    $PHPUnit->assertEquals(self::VIRTUAL_HOST, $exchange->vhost);
+                    $PHPUnit->assertEquals($PHPUnit::VIRTUAL_HOST, $exchange->vhost);
                 }
                 $loop->stop();
             }, function() use ($PHPUnit) {
@@ -450,8 +450,8 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->getQueue(self::VIRTUAL_HOST, self::QUEUE_TEST_NAME)
             ->then(function($resultQueue) use (&$success, $PHPUnit, $loop) {
                 $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $resultQueue);
-                $PHPUnit->assertEquals(self::VIRTUAL_HOST, $resultQueue->vhost);
-                $PHPUnit->assertEquals(self::QUEUE_TEST_NAME, $resultQueue->name);
+                $PHPUnit->assertEquals($PHPUnit::VIRTUAL_HOST, $resultQueue->vhost);
+                $PHPUnit->assertEquals($PHPUnit::QUEUE_TEST_NAME, $resultQueue->name);
                 $success = true;
                 $loop->stop();
             }, function() use ($PHPUnit) {
