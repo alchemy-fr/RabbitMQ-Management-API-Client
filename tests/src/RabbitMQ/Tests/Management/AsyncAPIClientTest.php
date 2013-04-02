@@ -177,7 +177,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                 $PHPUnit->assertNonEmptyArrayCollection($exchanges);
                 foreach ($exchanges as $exchange) {
                     $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
-                    $this->assertEquals(self::VIRTUAL_HOST, $exchange->vhost);
+                    $PHPUnit->assertEquals(self::VIRTUAL_HOST, $exchange->vhost);
                 }
                 $loop->stop();
             }, function() use ($PHPUnit) {
@@ -665,9 +665,9 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                 $this->object->listBindingsByExchangeAndQueue(self::VIRTUAL_HOST, $exchange->name, $queue->name)
                     ->then(function($bindings) use (&$success, $loop, $queue, $exchange, $PHPUnit) {
                         foreach ($bindings as $binding) {
-                            $this->assertEquals('/', $binding->vhost);
-                            $this->assertEquals($queue->name, $binding->destination);
-                            $this->assertEquals($exchange->name, $binding->source);
+                            $PHPUnit->assertEquals('/', $binding->vhost);
+                            $PHPUnit->assertEquals($queue->name, $binding->destination);
+                            $PHPUnit->assertEquals($exchange->name, $binding->source);
                         }
                         $success = true;
                         $loop->stop();
