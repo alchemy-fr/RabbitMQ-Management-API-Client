@@ -612,7 +612,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(0, $queue->messages_ready);
     }
 
-    private function assertNonEmptyArrayCollection($collection)
+    public function assertNonEmptyArrayCollection($collection)
     {
         $this->assertInstanceOf('Doctrine\Common\Collections\ArrayCollection', $collection);
         $this->assertGreaterThan(0, count($collection), 'Collection is not empty');

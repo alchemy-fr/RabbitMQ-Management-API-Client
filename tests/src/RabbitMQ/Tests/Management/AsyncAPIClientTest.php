@@ -998,7 +998,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($success);
     }
 
-    private function assertNonEmptyArrayCollection($collection)
+    public function assertNonEmptyArrayCollection($collection)
     {
         $this->assertInstanceOf('Doctrine\Common\Collections\ArrayCollection', $collection);
         $this->assertGreaterThan(0, count($collection), 'Collection is not empty');
