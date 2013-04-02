@@ -494,7 +494,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                 $PHPUnit->assertInstanceOf('RabbitMQ\\Management\\Entity\\Queue', $returnedQueue);
                 $PHPUnit->assertEquals($returnedQueue->toJson(), $queue->toJson());
 
-                $client->deleteQueue('/', self::QUEUE_TEST_NAME)
+                $client->deleteQueue('/', $PHPUnit::QUEUE_TEST_NAME)
                 ->then(function() use ($loop) {
                         $loop->stop();
                     });
