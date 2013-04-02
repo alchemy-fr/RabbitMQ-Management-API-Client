@@ -656,6 +656,14 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $PHPUnit = $this;
         $success = false;
 
+        $queue = $this->createQueue();
+
+        $exchange = new Exchange();
+        $exchange->vhost = self::VIRTUAL_HOST;
+        $exchange->name = self::EXCHANGE_TEST_NAME;
+
+        $this->syncClient->addExchange($exchange);
+
         foreach ($this->syncClient->listQueues() as $queue) {
             foreach ($this->syncClient->listExchanges() as $exchange) {
                 if ($exchange->name == '') {
