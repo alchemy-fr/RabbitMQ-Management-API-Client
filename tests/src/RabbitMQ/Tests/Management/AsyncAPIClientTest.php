@@ -800,9 +800,9 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                     }
                 }
                 $client->deleteBinding($found)
-                ->then(function() use ($client, &$success, $loop) {
+                ->then(function() use ($client, &$success, $loop, $PHPUnit) {
                     $client->listBindingsByExchangeAndQueue('/', $PHPUnit::EXCHANGE_TEST_NAME, $PHPUnit::QUEUE_TEST_NAME)
-                    ->then(function($bindings) use ($client, &$success, $loop) {
+                    ->then(function($bindings) use ($client, &$success, $loop, $PHPUnit) {
                             $found = false;
 
                             foreach ($bindings as $binding) {
@@ -812,7 +812,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                             }
 
                             if ($found) {
-                                $this->fail('unable to find delete the binding');
+                                $PHPUnit->fail('unable to find delete the binding');
                             }
                             $success = true;
                             $loop->stop();
