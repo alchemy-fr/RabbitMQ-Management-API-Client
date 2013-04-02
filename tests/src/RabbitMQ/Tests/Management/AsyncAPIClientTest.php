@@ -801,7 +801,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                 }
                 $client->deleteBinding($found)
                 ->then(function() use ($client, &$success, $loop) {
-                    $client->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME)
+                    $client->listBindingsByExchangeAndQueue('/', $PHPUnit::EXCHANGE_TEST_NAME, $PHPUnit::QUEUE_TEST_NAME)
                     ->then(function($bindings) use ($client, &$success, $loop) {
                             $found = false;
 
