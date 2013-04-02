@@ -732,7 +732,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
 
         $this->object->addBinding($binding)
             ->then(function($res) use ($client, &$success, $loop, $PHPUnit) {
-                $client->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME)
+                $client->listBindingsByExchangeAndQueue('/', $PHPUnit::EXCHANGE_TEST_NAME, $PHPUnit::QUEUE_TEST_NAME)
                 ->then(function($bindings) use ($client, &$success, $loop) {
                     foreach ($bindings as $binding) {
                         if ($binding->routing_key === 'rounting.key' && $binding->arguments === array('bim' => 'boom')) {
