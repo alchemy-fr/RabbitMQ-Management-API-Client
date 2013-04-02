@@ -791,7 +791,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $client = $this->object;
 
         $this->object->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME)
-            ->then(function($bindings) use ($client, &$success, $loop) {
+            ->then(function($bindings) use ($client, &$success, $loop, $PHPUnit) {
                 $found = false;
                 foreach ($bindings as $binding) {
                     if ($binding->routing_key == 'rounting.key') {
@@ -802,7 +802,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                 $client->deleteBinding($found)
                 ->then(function() use ($client, &$success, $loop, $PHPUnit) {
                     $client->listBindingsByExchangeAndQueue('/', $PHPUnit::EXCHANGE_TEST_NAME, $PHPUnit::QUEUE_TEST_NAME)
-                    ->then(function($bindings) use ($client, &$success, $loop, $PHPUnit) {
+                    ->then(function($bindings) use (&$success, $loop, $PHPUnit) {
                             $found = false;
 
                             foreach ($bindings as $binding) {
@@ -819,7 +819,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                         }, function() {
                             $PHPUnit->fail('Should no failed');
                         });
-                }, function() {
+                }, function() use ($PHPUnit) {
                     $PHPUnit->fail('Should no failed');
                 });
             }, function() use ($PHPUnit) {
