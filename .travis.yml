@@ -4,7 +4,7 @@ services:
   - rabbitmq
 
 before_script:
-  - composer install --dev
+  - composer install --dev --prefer-source
 
 php:
   - 5.3.3
@@ -13,4 +13,4 @@ php:
   - 5.5
 
 script:
-  - phpunit
+  - vendor/bin/phpunit
