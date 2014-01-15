@@ -7,14 +7,15 @@ class Exchange extends AbstractEntity
     public $name;
     public $vhost;
     public $type;
-    public $incoming;
-    public $outgoing;
+    public $incoming = array();
+    public $outgoing = array();
     public $message_stats_in;
     public $message_stats_out;
     public $durable = false;
     public $auto_delete = false;
     public $internal = false;
     public $arguments = array();
+    public $message_stats = array();
 
     protected function getJsonParameters()
     {

@@ -703,11 +703,12 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $success = false;
 
         $this->object->listBindingsByExchangeAndQueue(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME)
-            ->then(function($bindings) {
-                $PHPUnit->fail('Should not success');
-            }, function() use ($PHPUnit, $loop, &$success) {
+            ->then(function($bindings) use ($PHPUnit, $loop, &$success) {
                 $success = true;
                 $loop->stop();
+                $PHPUnit->assertCount(0, $bindings);
+            }, function() use ($PHPUnit) {
+                $PHPUnit->fail('Should not fail');
             });
 
         $loop->run();

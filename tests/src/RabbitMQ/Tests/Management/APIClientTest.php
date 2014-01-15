@@ -392,16 +392,13 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testListBindingsByQueueFailed()
+    public function testListBindingsOnUnknownHostOrQueue()
     {
         $queue = new Queue();
         $queue->name = 'nonexistent queue';
         $queue->vhost = self::NONEXISTENT_VIRTUAL_HOST;
 
-        $this->object->listBindingsByQueue($queue);
+        $this->assertCount(0, $this->object->listBindingsByQueue($queue));
     }
 
     public function testListBindingsByExchangeAndQueue()
@@ -421,12 +418,9 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testListBindingsByExchangeAndQueueFailed()
+    public function testListBindingsByExchangeAndQueueOnUnknownVhostOrQueue()
     {
-        $this->object->listBindingsByExchangeAndQueue(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME);
+        $this->assertCount(0, $this->object->listBindingsByExchangeAndQueue(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME));
     }
 
     public function testAddBinding()

@@ -9,6 +9,7 @@ class Queue extends AbstractEntity
     public $durable = false;
     public $name;
     public $vhost;
+    public $status;
 
     public $node;
     public $policy;
@@ -27,6 +28,8 @@ class Queue extends AbstractEntity
     public $exclusive_consumer_tag;
     public $memory;
     public $idle_since;
+    public $incoming = array();
+    public $deliveries = array();
 
     public function getBindings()
     {
