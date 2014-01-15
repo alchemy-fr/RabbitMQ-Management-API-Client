@@ -3,10 +3,6 @@
     "type": "library",
     "description": "RabbitMQ Management Plugin API Client",
     "keywords": ["api", "rabbitmq", "management"],
-    "minimum-stability": "dev",
-    "config": {
-        "bin-dir": "bin/"
-    },
     "license": "MIT",
     "authors": [
         {
@@ -15,20 +11,24 @@
         }
     ],
     "require": {
-        "guzzle/guzzle": "3.0.*",
-        "react/promise": "1.0.*",
-        "react/react": "0.2.*",
-        "react/curry": "1.0.*",
-        "doctrine/common": ">=2.0"
+        "doctrine/common": ">=2.0",
+        "guzzle/guzzle": "~3.0"
     },
     "require-dev": {
-        "videlalvaro/php-amqplib": "dev-master",
-        "sami/sami": "dev-master"
+        "videlalvaro/php-amqplib": "dev-master@dev",
+        "sami/sami": "~1.0",
+        "phpunit/phpunit": "~3.7",
+        "react/promise": "~1.0",
+        "react/react": "~0.2.0",
+        "react/curry": "~1.0"
     },
     "autoload": {
         "psr-0": {
             "RabbitMQ": "src"
         }
+    },
+    "suggest": {
+        "react/react": "Version 0.2 to use the async client"
     },
     "extra": {
         "branch-alias": {
