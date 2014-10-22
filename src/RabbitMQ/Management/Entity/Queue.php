@@ -21,6 +21,8 @@ class Queue extends AbstractEntity
     public $slave_nodes;
     public $consumers;
     public $consumer_details = array();
+    public $consumer_utilisation;
+    public $state;
     public $messages;
     public $messages_ready;
     public $message_stats;
