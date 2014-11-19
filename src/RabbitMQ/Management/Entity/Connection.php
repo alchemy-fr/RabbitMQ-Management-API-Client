@@ -41,6 +41,7 @@ class Connection extends AbstractEntity
     public $client_properties;
     public $channel_max;
     public $global_prefetch_count;
+    public $connected_at;
 
     protected function getJsonParameters()
     {
