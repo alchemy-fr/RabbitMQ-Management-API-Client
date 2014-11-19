@@ -39,6 +39,9 @@ class Connection extends AbstractEntity
     public $timeout;
     public $frame_max;
     public $client_properties;
+    public $channel_max;
+    public $global_prefetch_count;
+    public $connected_at;
 
     protected function getJsonParameters()
     {

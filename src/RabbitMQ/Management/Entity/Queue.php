@@ -21,6 +21,8 @@ class Queue extends AbstractEntity
     public $slave_nodes;
     public $consumers;
     public $consumer_details = array();
+    public $consumer_utilisation;
+    public $state;
     public $messages;
     public $messages_ready;
     public $message_stats;
@@ -30,6 +32,7 @@ class Queue extends AbstractEntity
     public $idle_since;
     public $incoming = array();
     public $deliveries = array();
+    public $down_slave_nodes;
 
     public function getBindings()
     {
