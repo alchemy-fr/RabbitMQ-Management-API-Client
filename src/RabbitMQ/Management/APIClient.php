@@ -18,7 +18,7 @@ use RabbitMQ\Management\HttpClient;
 class APIClient
 {
     /**
-     * @var RabbitMQCient
+     * @var HttpClient
      */
     private $client;
     private $hydrator;
