@@ -25,6 +25,7 @@ class Channel extends AbstractEntity
     public $vhost;
     public $deliveries = array();
     public $global_prefetch_count;
+    public $state;
 
     protected function getJsonParameters()
     {
