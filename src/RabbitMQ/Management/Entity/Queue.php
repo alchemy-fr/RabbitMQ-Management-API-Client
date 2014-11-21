@@ -34,6 +34,7 @@ class Queue extends AbstractEntity
     public $deliveries = array();
     public $down_slave_nodes;
     public $messages_ram;
+    public $messages_ready_ram;
 
     public function getBindings()
     {
