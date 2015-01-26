@@ -30,6 +30,7 @@ class Queue extends AbstractEntity
     public $idle_since;
     public $incoming = array();
     public $deliveries = array();
+    public $synchronised_slave_nodes = array();
 
     public function getBindings()
     {
