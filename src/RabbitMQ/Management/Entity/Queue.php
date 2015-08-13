@@ -42,6 +42,10 @@ class Queue extends AbstractEntity
     public $message_bytes_unacknowledged;
     public $message_bytes_ram;
     public $message_bytes_persistent;
+    public $synchronised_slave_nodes;
+    public $recoverable_slaves;
+    public $disk_reads;
+    public $disk_writes;
 
     public function getBindings()
     {
