@@ -16,9 +16,10 @@ class Exchange extends AbstractEntity
     public $internal = false;
     public $arguments = array();
     public $message_stats = array();
+    public $policy;
 
     protected function getJsonParameters()
     {
-        return array('type', 'auto_delete', 'durable', 'internal', 'arguments', 'vhost', 'name');
+        return array('type', 'auto_delete', 'durable', 'internal', 'arguments', 'vhost', 'name', 'policy');
     }
 }
