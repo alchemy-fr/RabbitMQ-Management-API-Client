@@ -27,6 +27,7 @@ class Queue extends AbstractEntity
     public $messages_ready;
     public $message_stats;
     public $messages_unacknowledged;
+    public $messages_paged_out;
     public $exclusive_consumer_tag;
     public $memory;
     public $idle_since;
@@ -42,6 +43,7 @@ class Queue extends AbstractEntity
     public $message_bytes_unacknowledged;
     public $message_bytes_ram;
     public $message_bytes_persistent;
+    public $message_bytes_paged_out;
     public $reductions;
     public $reductions_details;
     public $synchronised_slave_nodes = array();
