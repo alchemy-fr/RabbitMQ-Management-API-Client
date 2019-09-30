@@ -5,6 +5,7 @@ services:
 
 before_script:
   - composer install --prefer-source
+  - rabbitmq-plugins enable rabbitmq_management
 
 php:
   - 7.2
