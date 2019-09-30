@@ -1,18 +1,24 @@
-<?php
+<?php /** @noinspection MethodShouldBeFinalInspection */
+
+/** @noinspection PhpUnhandledExceptionInspection */
 
 namespace RabbitMQ\Tests\Management;
 
-use PhpAmqpLib\Connection\AMQPConnection;
+use Exception;
+use GuzzleHttp\Exception\ClientException;
 use PhpAmqpLib\Channel\AMQPChannel;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PHPUnit\Framework\TestCase;
 use RabbitMQ\Management\APIClient;
-use RabbitMQ\Management\HttpClient;
+use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Entity\Exchange;
 use RabbitMQ\Management\Entity\Queue;
-use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Exception\EntityNotFoundException;
 use RabbitMQ\Management\Exception\PreconditionFailedException;
+use RabbitMQ\Management\HttpClient;
 
-class APIClientTest extends \PHPUnit_Framework_TestCase
+
+class APIClientTest extends TestCase
 {
     const EXCHANGE_TEST_NAME = 'phrasea.baloo';
     const QUEUE_TEST_NAME = 'phrasea.queue.baloo';
@@ -25,44 +31,69 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
     protected $object;
 
     /**
-     * @var AMQPConnection
+     * @var AMQPStreamConnection
      */
-    protected $conn;
+    protected $conn = null;
     protected $client;
 
     /**
      * @var AMQPChannel
      */
-    protected $channel;
+    protected $channel = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->client = HttpClient::factory(array('host'         => 'localhost'));
+        $this->client = HttpClient::factory(array('host' => 'localhost'));
         $this->object = new APIClient($this->client);
 
-        $this->conn = new \PhpAmqpLib\Connection\AMQPConnection('localhost', 5672, 'guest', 'guest', '/');
-        $this->channel = $this->conn->channel();
+        /* might be left over from previous failed test */
+        $this->cleanupTestObjects();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
+        $this->cleanupTestObjects();
+
+        try {
+            if ($this->channel != null) {
+                $this->channel->close();
+            }
+            if ($this->conn != null) {
+                $this->conn->close();
+            }
+        } catch (Exception $e) {
+            /* don't care */
+        }
+    }
+
+    private function needConnection(): void
+    {
+        $this->conn = new AMQPStreamConnection('localhost', 5672, 'guest', 'guest', '/');
+        $this->channel = $this->conn->channel();
+
+        /* attempting to see own connection just made, management api may delay showing it, so wait before testing */
+        sleep(5);
+
+    }
+
+    private function cleanupTestObjects(): void
+    {
+        /* do not combine into one try/catch block because we want both to be tried even if first fails */
         try {
             $this->object->deleteQueue('/', self::QUEUE_TEST_NAME);
-        } catch (\Exception $e) {
-
+        } catch (EntityNotFoundException $e) {
+            /* might not exist, don't care if fails */
         }
         try {
             $this->object->deleteExchange('/', self::EXCHANGE_TEST_NAME);
-        } catch (\Exception $e) {
-
+        } catch (EntityNotFoundException $e) {
+            /* might not exist, don't care if fails */
         }
-
-        $this->channel->close();
-        $this->conn->close();
     }
 
-    public function testListConnections()
+    public function testListConnections(): void
     {
+        $this->needConnection();
         $connections = $this->object->listConnections();
 
         $this->assertNonEmptyArrayCollection($connections);
@@ -72,8 +103,9 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testGetConnection()
+    public function testGetConnection(): void
     {
+        $this->needConnection();
         $connections = $this->object->listConnections()->toArray();
         $expectedConnection = array_pop($connections);
 
@@ -83,19 +115,38 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedConnection, $connection);
     }
 
-    public function testDeleteConnection()
+    public function testDeleteConnection(): void
     {
-        $this->markTestSkipped('Not working ?!');
+        $this->needConnection();
+
+        $success = false;
 
         $connections = $this->object->listConnections()->toArray();
-        $quantity = count($connections);
         $expectedConnection = array_pop($connections);
         $this->object->deleteConnection($expectedConnection->name);
-        $this->assertEquals($quantity - 1, count($this->object->listConnections()));
+        /* make sure we don't try to tear down */
+        $this->channel = null;
+        $this->conn = null;
+
+        /* wait for info to update on server */
+        sleep(10);
+        /* its either going to return the connection in closed state or failed to find it */
+        try {
+            $expectedConnection = $this->object->getConnection($expectedConnection->name);
+            if ($expectedConnection->state == "closed") {
+                $success = true;
+            }
+        } catch (EntityNotFoundException $e) {
+            $this->assertContains("Failed to find connection", $e->getMessage());
+            $success = true;
+        }
+        $this->assertEquals(true, $success);
+
     }
 
-    public function testListChannels()
+    public function testListChannels(): void
     {
+        $this->needConnection();
         $channels = $this->object->listChannels();
 
         $this->assertNonEmptyArrayCollection($channels);
@@ -105,19 +156,19 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testGetChannel()
+    public function testGetChannel(): void
     {
+        $this->needConnection();
         $channels = $this->object->listChannels()->toArray();
         $expectedChannel = array_pop($channels);
 
         $channel = $this->object->getChannel($expectedChannel->name);
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Channel', $channel);
 
-        $this->markTestSkipped('Not working ?!');
-        $this->assertEquals($expectedChannel, $channel);
+        $this->assertEquals($expectedChannel->name, $channel->name);
     }
 
-    public function testListExchanges()
+    public function testListExchanges(): void
     {
         $exchanges = $this->object->listExchanges();
 
@@ -128,7 +179,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testListExchangesWithVhost()
+    public function testListExchangesWithVhost(): void
     {
         $exchanges = $this->object->listExchanges(self::VIRTUAL_HOST);
 
@@ -139,15 +190,13 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testListExchangeFailed()
+    public function testListExchangeFailed(): void
     {
+        $this->expectException(ClientException::class);
         $this->object->listExchanges(self::NONEXISTENT_VIRTUAL_HOST);
     }
 
-    public function testGetExchange()
+    public function testGetExchange(): void
     {
         $exchanges = $this->object->listExchanges()->toArray();
         $expectedExchange = array_pop($exchanges);
@@ -158,40 +207,36 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedExchange, $exchange);
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\EntityNotFoundException
-     */
-    public function testGetExchangeFailed()
+
+    public function testGetExchangeFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $this->object->getExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME);
     }
 
-    public function testDeleteExchange()
+    public function testDeleteExchange(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $exchange = new Exchange();
         $exchange->name = self::EXCHANGE_TEST_NAME;
         $exchange->vhost = '/';
+        $exchange->type = 'fanout';
 
         $this->object->addExchange($exchange);
         $this->object->deleteExchange('/', self::EXCHANGE_TEST_NAME);
 
-        try {
-            $this->object->getExchange($exchange->vhost, $exchange->name);
-            $this->fail('Should raise an exception');
-        } catch (EntityNotFoundException $e) {
+        /* expected to raise an exception */
+        $this->object->getExchange($exchange->vhost, $exchange->name);
 
-        }
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testDeleteExchangeFailed()
+    public function testDeleteExchangeFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $this->object->deleteExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME);
     }
 
-    public function testAddExchange()
+    public function testAddExchange(): void
     {
         $exchange = new Exchange();
 
@@ -209,11 +254,10 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->deleteExchange('/', self::EXCHANGE_TEST_NAME);
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testAddExchangeFailed()
+
+    public function testAddExchangeFailed(): void
     {
+        $this->expectException(ClientException::class);
         $exchange = new Exchange();
 
         $exchange->vhost = self::NONEXISTENT_VIRTUAL_HOST;
@@ -224,11 +268,13 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->addExchange($exchange);
     }
 
-    public function testAddExchangeThatAlreadyExists()
+    public function testAddExchangeThatAlreadyExists(): void
     {
+        $this->expectNotToPerformAssertions();
         $exchange = new Exchange();
         $exchange->vhost = '/';
         $exchange->name = self::EXCHANGE_TEST_NAME;
+        $exchange->type = 'fanout';
 
         $this->object->addExchange($exchange);
 
@@ -240,11 +286,12 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         } catch (PreconditionFailedException $e) {
 
         }
+        $this->object->deleteExchange($exchange->vhost, $exchange->name);
     }
 
-    public function testListQueues()
+    public function testListQueues(): void
     {
-        $queue = $this->createQueue();
+        $this->createQueue();
 
         $queues = $this->object->listQueues();
 
@@ -255,7 +302,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    private function createQueue()
+    private function createQueue(): Queue
     {
         $queue = new Queue();
         $queue->vhost = '/';
@@ -266,9 +313,9 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         return $queue;
     }
 
-    public function testListQueuesWithVhost()
+    public function testListQueuesWithVhost(): void
     {
-        $queue = $this->createQueue();
+        $this->createQueue();
 
         $queues = $this->object->listQueues(self::VIRTUAL_HOST);
 
@@ -279,17 +326,15 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testListQueueFailed()
+    public function testListQueueFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $this->object->listQueues(self::NONEXISTENT_VIRTUAL_HOST);
     }
 
-    public function testGetQueue()
+    public function testGetQueue(): void
     {
-        $queue = $this->createQueue();
+        $this->createQueue();
 
         $queues = $this->object->listQueues()->toArray();
         $expectedQueue = array_pop($queues);
@@ -299,18 +344,17 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $queue = $this->object->getQueue($expectedQueue->vhost, $expectedQueue->name);
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $queue);
 
-        $this->assertEquals($expectedQueue, $queue);
+        $this->assertEquals($expectedQueue->vhost, $queue->vhost);
+        $this->assertEquals($expectedQueue->name, $queue->name);
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\EntityNotFoundException
-     */
-    public function testGetQueueFailed()
+    public function testGetQueueFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $this->object->getQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME);
     }
 
-    public function testAddQueue()
+    public function testAddQueue(): void
     {
         $queue = new Queue();
         $queue->vhost = '/';
@@ -325,11 +369,9 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->deleteQueue('/', self::QUEUE_TEST_NAME);
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testAddQueueFailed()
+    public function testAddQueueFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $queue = new Queue();
         $queue->vhost = self::NONEXISTENT_VIRTUAL_HOST;
         $queue->name = self::QUEUE_TEST_NAME;
@@ -337,30 +379,28 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->addQueue($queue);
     }
 
-    public function testDeleteQueue()
+    public function testDeleteQueue(): void
     {
+        $this->expectException(EntityNotFoundException::class);
+
         $queue = $this->createQueue();
 
         $this->object->deleteQueue('/', self::QUEUE_TEST_NAME);
 
-        try {
-            $this->object->getQueue($queue->vhost, $queue->name);
-            $this->fail('Should raise an exception');
-        } catch (EntityNotFoundException $e) {
-
-        }
+        /* expected to throw exception */
+        $this->object->getQueue($queue->vhost, $queue->name);
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testDeleteQueueFailed()
+    public function testDeleteQueueFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $this->object->deleteQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME);
     }
 
-    public function testAddQueueThatAlreadyExists()
+    public function testAddQueueThatAlreadyExists(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $queue = $this->createQueue();
 
         $queue->durable = true;
@@ -373,16 +413,17 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testPurgeQueueFailed()
+    public function testPurgeQueueFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $this->object->purgeQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME);
     }
 
-    public function testListBindingsByQueue()
+    public function testListBindingsByQueue(): void
     {
+        $this->createQueue();
+        $this->createBinding();
+
         foreach ($this->object->listQueues() as $queue) {
             foreach ($this->object->listBindingsByQueue($queue) as $binding) {
                 /* @var $binding Binding */
@@ -392,7 +433,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testListBindingsOnUnknownHostOrQueue()
+    public function testListBindingsOnUnknownHostOrQueue(): void
     {
         $queue = new Queue();
         $queue->name = 'nonexistent queue';
@@ -401,8 +442,11 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(0, $this->object->listBindingsByQueue($queue));
     }
 
-    public function testListBindingsByExchangeAndQueue()
+    public function testListBindingsByExchangeAndQueue(): void
     {
+        $this->createQueue();
+        $this->createBinding();
+
         foreach ($this->object->listQueues() as $queue) {
             foreach ($this->object->listExchanges() as $exchange) {
                 if ($exchange->name == '') {
@@ -418,14 +462,16 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testListBindingsByExchangeAndQueueOnUnknownVhostOrQueue()
+    public function testListBindingsByExchangeAndQueueOnUnknownVhostOrQueue(): void
     {
         $this->assertCount(0, $this->object->listBindingsByExchangeAndQueue(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME));
     }
 
-    public function testAddBinding()
+    public function testAddBinding(): void
     {
-        $queue = $this->createQueue();
+        $this->expectNotToPerformAssertions();
+
+        $this->createQueue();
 
         $exchange = new Exchange();
         $exchange->name = self::EXCHANGE_TEST_NAME;
@@ -458,11 +504,9 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->deleteBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $found);
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testAddBindingFailed()
+    public function testAddBindingFailed(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $binding = new Binding();
         $binding->vhost = '/';
         $binding->source = self::EXCHANGE_TEST_NAME;
@@ -471,8 +515,10 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->addBinding($binding);
     }
 
-    public function testDeleteBinding()
+    public function testDeleteBinding(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->createBinding();
 
         $found = false;
@@ -498,9 +544,9 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    private function createBinding()
+    private function createBinding(): void
     {
-        $queue = $this->createQueue();
+        $this->createQueue();
 
         $exchange = new Exchange();
         $exchange->name = self::EXCHANGE_TEST_NAME;
@@ -517,18 +563,17 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         $this->object->addBinding($binding);
     }
 
-    /**
-     * @expectedException RabbitMQ\Management\Exception\RuntimeException
-     */
-    public function testDeleteNonexistentBinding()
+
+    public function testDeleteNonexistentBinding(): void
     {
+        $this->expectException(EntityNotFoundException::class);
         $binding = new Binding();
         $binding->properties_key = 'bingo';
 
         $this->object->deleteBinding('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME, $binding);
     }
 
-    public function testListBindings()
+    public function testListBindings(): void
     {
         $this->createBinding();
 
@@ -541,7 +586,7 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testListBindingsWithVhost()
+    public function testListBindingsWithVhost(): void
     {
         $this->createBinding();
 
@@ -554,17 +599,17 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testAlivenessTest()
+    public function testAlivenessTest(): void
     {
         $this->assertTrue($this->object->alivenessTest(self::VIRTUAL_HOST));
     }
 
-    public function testAlivenessTestFailed()
+    public function testAlivenessTestFailed(): void
     {
         $this->assertFalse($this->object->alivenessTest(self::NONEXISTENT_VIRTUAL_HOST));
     }
 
-    public function testPurgeQueue()
+    public function testPurgeQueue(): void
     {
         $queue = $this->createQueue();
 
@@ -584,29 +629,32 @@ class APIClientTest extends \PHPUnit_Framework_TestCase
 
         $message = json_encode(array(
             'properties' => array(),
-            'routing_key'      => self::QUEUE_TEST_NAME,
-            'payload'          => 'body',
+            'routing_key' => self::QUEUE_TEST_NAME,
+            'payload' => 'body',
             'payload_encoding' => 'string',
-            ));
+        ));
+
+        $message = str_replace('[]', '{}', $message);
 
         $n = 12;
         while ($n > 0) {
-            $this->client->post('/api/exchanges/' . urlencode('/') . '/' . self::EXCHANGE_TEST_NAME . '/publish', array('content-type' => 'application/json'), $message)->send();
+            $this->client->post('/api/exchanges/' . urlencode('/') . '/' . self::EXCHANGE_TEST_NAME . '/publish',
+                ['headers' => ['content-type' => 'application/json'], 'body' => $message]);
             $n--;
         }
 
-        usleep(2000000);
+        sleep(10);
         $this->object->refreshQueue($queue);
         $this->assertEquals(12, $queue->messages_ready);
 
         $this->object->purgeQueue('/', self::QUEUE_TEST_NAME);
 
-        usleep(4000000);
+        sleep(10);
         $this->object->refreshQueue($queue);
         $this->assertEquals(0, $queue->messages_ready);
     }
 
-    public function assertNonEmptyArrayCollection($collection)
+    public function assertNonEmptyArrayCollection($collection): void
     {
         $this->assertInstanceOf('Doctrine\Common\Collections\ArrayCollection', $collection);
         $this->assertGreaterThan(0, count($collection), 'Collection is not empty');

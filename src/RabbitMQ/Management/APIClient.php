@@ -1,25 +1,23 @@
 <?php
+/** @noinspection PhpUnhandledExceptionInspection */
 
 namespace RabbitMQ\Management;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Guzzle\Http\Exception\RequestException;
+use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\RequestException;
 use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Entity\Channel;
 use RabbitMQ\Management\Entity\Exchange;
 use RabbitMQ\Management\Entity\Queue;
 use RabbitMQ\Management\Entity\EntityInterface;
 use RabbitMQ\Management\Exception\PreconditionFailedException;
-use RabbitMQ\Management\Exception\RuntimeException;
 use RabbitMQ\Management\Exception\InvalidArgumentException;
 use RabbitMQ\Management\Exception\EntityNotFoundException;
-use RabbitMQ\Management\HttpClient;
+
 
 class APIClient
 {
-    /**
-     * @var RabbitMQCient
-     */
     private $client;
     private $hydrator;
 
@@ -39,19 +37,28 @@ class APIClient
         return $this->retrieveCollection('/api/connections', 'RabbitMQ\Management\Entity\Connection');
     }
 
+
     public function getConnection($name)
     {
-        $uri = sprintf('/api/connections/%s', urlencode($name));
+        $uri = sprintf('/api/connections/%s', rawurlencode($name));
 
-        return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Connection');
+        try {
+            return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Connection');
+        } catch (EntityNotFoundException $e) {
+            throw new EntityNotFoundException('Failed to find connection: ' . $name, $e->getCode(), $e);
+        }
     }
+
 
     public function deleteConnection($name)
     {
         try {
-            $this->client->delete(sprintf('/api/connections/%s', urlencode($name)))->send();
-        } catch (RequestException $e) {
-            throw new RuntimeException('Failed to delete connection', $e->getCode(), $e);
+            $this->client->delete(sprintf('/api/connections/%s', rawurlencode($name)));
+        } catch (ClientException $e) {
+            if ($e->getCode() == 404) {
+                throw new EntityNotFoundException('Connection not found: ' . $name);
+            }
+            throw $e;
         }
 
         return $this;
@@ -64,15 +71,19 @@ class APIClient
 
     public function getChannel($name, Channel $channel = null)
     {
-        $uri = sprintf('/api/channels/%s', urlencode($name));
+        $uri = sprintf('/api/channels/%s', rawurlencode($name));
 
-        return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Channel', $channel);
+        try {
+            return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Channel', $channel);
+        } catch (EntityNotFoundException $e) {
+            throw new EntityNotFoundException('Failed to find channel: ' . $name);
+        }
     }
 
     public function listExchanges($vhost = null)
     {
         if (null !== $vhost) {
-            $uri = sprintf('/api/exchanges/%s', urlencode($vhost));
+            $uri = sprintf('/api/exchanges/%s', rawurlencode($vhost));
         } else {
             $uri = '/api/exchanges';
         }
@@ -90,9 +101,13 @@ class APIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        $uri = sprintf('/api/exchanges/%s/%s', urlencode($vhost), urlencode($name));
+        $uri = sprintf('/api/exchanges/%s/%s', rawurlencode($vhost), rawurlencode($name));
 
-        return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Exchange', $exchange);
+        try {
+            return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Exchange', $exchange);
+        } catch (EntityNotFoundException $e) {
+            throw new EntityNotFoundException('Failed to find exchange: ' . $name);
+        }
     }
 
     public function deleteExchange($vhost, $name)
@@ -105,22 +120,30 @@ class APIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        $uri = sprintf('/api/exchanges/%s/%s', urlencode($vhost), urlencode($name));
+        $uri = sprintf('/api/exchanges/%s/%s', rawurlencode($vhost), rawurlencode($name));
 
         try {
-            $this->client->delete($uri)->send();
-        } catch (RequestException $e) {
-            throw new RuntimeException('Unable to delete exchange', $e->getCode(), $e);
+            $this->client->delete($uri);
+        } catch (ClientException $e) {
+            if ($e->getCode() == 404) {
+                throw new EntityNotFoundException('Unable to find exchange for deletion: ' . $vhost . '/' . $name);
+            }
+            throw $e;
         }
+
 
         return $this;
     }
 
     public function refreshExchange(Exchange $exchange)
     {
-        $uri = sprintf('/api/exchanges/%s/%s', urlencode($exchange->vhost), urlencode($exchange->name));
+        $uri = sprintf('/api/exchanges/%s/%s', rawurlencode($exchange->vhost), rawurlencode($exchange->name));
 
-        return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Exchange', $exchange);
+        try {
+            return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Exchange', $exchange);
+        } catch (EntityNotFoundException $e) {
+            throw new EntityNotFoundException('Failed ot find exchange: ' . $exchange->vhost . '/' . $exchange->name);
+        }
     }
 
     public function addExchange(Exchange $exchange)
@@ -133,17 +156,17 @@ class APIClient
             throw new InvalidArgumentException('Exchange requires a name');
         }
 
-        $uri = sprintf('/api/exchanges/%s/%s', urlencode($exchange->vhost), urlencode($exchange->name));
-
+        $uri = sprintf('/api/exchanges/%s/%s', rawurlencode($exchange->vhost), rawurlencode($exchange->name));
+        $json = $exchange->toJson();
         try {
-            $response = $this->client->put($uri, array('Content-Type' => 'application/json'), $exchange->toJson())->send();
-        } catch (RequestException $e) {
-            if ($data = json_decode($e->getResponse()->getBody(true), true)) {
-                if (isset($data['reason']) && strpos($data['reason'], '406 PRECONDITION_FAILED') === 0) {
+            $this->client->put($uri, ['headers' => ['Content-Type' => 'application/json'], 'body' => $json]);
+        } catch (ClientException $e) {
+            if ($data = json_decode($e->getResponse()->getBody(), true)) {
+                if (isset($data['reason']) && strpos($data['reason'], 'inequivalent arg') === 0) {
                     throw new PreconditionFailedException('Exchange already exists with different properties', $e->getCode(), $e);
                 }
             }
-            throw new RuntimeException('Unable to put the exchange', $e->getCode(), $e);
+            throw $e;
         }
 
         return $this->getExchange($exchange->vhost, $exchange->name, $exchange);
@@ -152,26 +175,40 @@ class APIClient
     public function listQueues($vhost = null)
     {
         if (null !== $vhost) {
-            $uri = sprintf('/api/queues/%s', urlencode($vhost));
+            $uri = sprintf('/api/queues/%s', rawurlencode($vhost));
         } else {
             $uri = '/api/queues';
         }
-
-        return $this->retrieveCollection($uri, 'RabbitMQ\Management\Entity\Queue');
+        try {
+            return $this->retrieveCollection($uri, 'RabbitMQ\Management\Entity\Queue');
+        } catch (ClientException $e) {
+            if ($e->getCode() == 404) {
+                throw new EntityNotFoundException("Failed to find virtual host to list queues: " . $vhost);
+            }
+            throw $e;
+        }
     }
 
     public function getQueue($vhost, $name, Queue $queue = null)
     {
-        $uri = sprintf('/api/queues/%s/%s', urlencode($vhost), urlencode($name));
+        $uri = sprintf('/api/queues/%s/%s', rawurlencode($vhost), rawurlencode($name));
 
-        return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Queue', $queue);
+        try {
+            return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Queue', $queue);
+        } catch (EntityNotFoundException $e) {
+            throw new EntityNotFoundException('Failed to find queue: ' . $vhost . '/' . $name);
+        }
     }
 
     public function refreshQueue(Queue $queue)
     {
-        $uri = sprintf('/api/queues/%s/%s', urlencode($queue->vhost), urlencode($queue->name));
+        $uri = sprintf('/api/queues/%s/%s', rawurlencode($queue->vhost), rawurlencode($queue->name));
 
-        return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Queue', $queue);
+        try {
+            return $this->retrieveEntity($uri, 'RabbitMQ\Management\Entity\Queue', $queue);
+        } catch (EntityNotFoundException $e) {
+            throw new EntityNotFoundException('Failed to find queue:' . $queue->vhost . '/' . $queue->name);
+        }
     }
 
     public function addQueue(Queue $queue)
@@ -184,17 +221,20 @@ class APIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        $uri = sprintf('/api/queues/%s/%s', urlencode($queue->vhost), urlencode($queue->name));
+        $uri = sprintf('/api/queues/%s/%s', rawurlencode($queue->vhost), rawurlencode($queue->name));
 
         try {
-            $this->client->put($uri, array('Content-type' => 'application/json'), $queue->toJson())->send();
-        } catch (RequestException $e) {
-            if ($data = json_decode($e->getResponse()->getBody(true), true)) {
-                if (isset($data['reason']) && strpos($data['reason'], '406 PRECONDITION_FAILED') === 0) {
+            $this->client->put($uri, ['headers' => ['Content-type' => 'application/json'], 'body' => $queue->toJson()]);
+        } catch (ClientException $e) {
+            if ($e->getCode() == 404) {
+                throw new EntityNotFoundException("Failed to find virtual host to add queue: " . $queue->vhost);
+            }
+            if ($data = json_decode($e->getResponse()->getBody(), true)) {
+                if (isset($data['reason']) && strpos($data['reason'], 'inequivalent arg') === 0) {
                     throw new PreconditionFailedException('Queue already exists with different properties', $e->getCode(), $e);
                 }
             }
-            throw new RuntimeException('Unable to put the queue', $e->getCode(), $e);
+            throw $e;
         }
 
         return $this->getQueue($queue->vhost, $queue->name, $queue);
@@ -212,10 +252,13 @@ class APIClient
 
         try {
             $this->client->delete(
-                sprintf('/api/queues/%s/%s', urlencode($vhost), urlencode($name))
-            )->send();
-        } catch (RequestException $e) {
-            throw new RuntimeException('Unable to delete queue', $e->getCode(), $e);
+                sprintf('/api/queues/%s/%s', rawurlencode($vhost), rawurlencode($name))
+            );
+        } catch (ClientException $e) {
+            if ($e->getCode() == 404) {
+                throw new  EntityNotFoundException('Unable to find queue to delete: ' . $vhost . '/' . $name);
+            }
+            throw $e;
         }
 
         return $this;
@@ -233,10 +276,13 @@ class APIClient
 
         try {
             $this->client->delete(
-                sprintf('/api/queues/%s/%s/contents', urlencode($vhost), urlencode($name))
-            )->send();
-        } catch (RequestException $e) {
-            throw new RuntimeException('Unable to purge queue', $e->getCode(), $e);
+                sprintf('/api/queues/%s/%s/contents', rawurlencode($vhost), rawurlencode($name))
+            );
+        } catch (ClientException $e) {
+            if ($e->getCode() == 404) {
+                throw new EntityNotFoundException('Unable to find queue to purge: ' . $vhost . '/' . $name);
+            }
+            throw $e;
         }
 
         return $this;
@@ -244,39 +290,45 @@ class APIClient
 
     public function listBindingsByQueue(Queue $queue)
     {
-        $uri = sprintf('/api/queues/%s/%s/bindings', urlencode($queue->vhost), urlencode($queue->name));
+        $uri = sprintf('/api/queues/%s/%s/bindings', rawurlencode($queue->vhost), rawurlencode($queue->name));
 
         return $this->retrieveCollection($uri, 'RabbitMQ\Management\Entity\Binding');
     }
 
     public function listBindingsByExchangeAndQueue($vhost, $exchange, $queue)
     {
-        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', urlencode($vhost), urlencode($exchange), urlencode($queue));
+        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', rawurlencode($vhost), rawurlencode($exchange), rawurlencode($queue));
 
         return $this->retrieveCollection($uri, 'RabbitMQ\Management\Entity\Binding');
     }
 
     public function addBinding(Binding $binding)
     {
-        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', urlencode($binding->vhost), urlencode($binding->source), urlencode($binding->destination));
+        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', rawurlencode($binding->vhost), rawurlencode($binding->source), rawurlencode($binding->destination));
 
         try {
-            $this->client->post($uri, array('Content-type' => 'application/json'), $binding->toJson())->send();
+            $this->client->post($uri, ['headers' => ['Content-type' => 'application/json'], 'body' => $binding->toJson()]);
         } catch (RequestException $e) {
-            throw new RuntimeException('Unable to add binding', $e->getCode(), $e);
-        }
+            if ($e->getCode() == 404) {
+                throw new EntityNotFoundException("Failed to find vhost for adding binding: " . $binding->vhost);
+            }
+            throw $e;
 
+        }
         return $this;
     }
 
     public function deleteBinding($vhost, $exchange, $queue, Binding $binding)
     {
-        $uri = sprintf('/api/bindings/%s/e/%s/q/%s/%s', urlencode($vhost), urlencode($exchange), urlencode($queue), urlencode($binding->properties_key));
+        $uri = sprintf('/api/bindings/%s/e/%s/q/%s/%s', rawurlencode($vhost), rawurlencode($exchange), rawurlencode($queue), rawurlencode($binding->properties_key));
 
         try {
-            $this->client->delete($uri)->send();
-        } catch (RequestException $e) {
-            throw new RuntimeException('Unable to delete binding', $e->getCode(), $e);
+            $this->client->delete($uri);
+        } catch (ClientException $e) {
+            if ($e->getCode() == 404) {
+                throw new EntityNotFoundException('Unable to find binding to delete: ' . $vhost . '/' . $exchange . '/' . $queue . '/' . $binding->properties_key);
+            }
+            throw $e;
         }
 
         return $this;
@@ -285,7 +337,7 @@ class APIClient
     public function listBindings($vhost = null)
     {
         if (null !== $vhost) {
-            $uri = sprintf('/api/bindings/%s', urlencode($vhost));
+            $uri = sprintf('/api/bindings/%s', rawurlencode($vhost));
         } else {
             $uri = '/api/bindings';
         }
@@ -296,7 +348,7 @@ class APIClient
     public function alivenessTest($vhost)
     {
         try {
-            $res = $this->client->get(sprintf('/api/aliveness-test/%s', urlencode($vhost)))->send()->getBody(true);
+            $res = $this->client->get(sprintf('/api/aliveness-test/%s', rawurlencode($vhost)))->getBody();
             $data = json_decode($res, true);
 
             if (!isset($data['status']) || $data['status'] !== 'ok') {
@@ -304,7 +356,7 @@ class APIClient
             }
 
             $this->deleteQueue($vhost, 'aliveness-test');
-        } catch (RequestException $e) {
+        } catch (ClientException $e) {
             return false;
         }
 
@@ -314,13 +366,14 @@ class APIClient
     private function retrieveEntity($uri, $targetEntity, EntityInterface $entity = null)
     {
         try {
-            $res = $this->client->get($uri)->send()->getBody(true);
-        } catch (RequestException $e) {
+            //$res = $this->client->get($uri)->getBody();
+            //$res = $this->client->get($uri)->getBody();
+            $res = $this->client->get($uri)->getBody();
+        } catch (ClientException $e) {
             if ($e->getResponse()->getStatusCode() === 404) {
                 throw new EntityNotFoundException('Entity not found', $e->getCode(), $e);
             }
-
-            throw new RuntimeException('Error while getting the entity', $e->getCode(), $e);
+            throw $e;
         }
 
         if (null === $entity) {
@@ -332,11 +385,7 @@ class APIClient
 
     private function retrieveCollection($uri, $targetEntity)
     {
-        try {
-            $res = $this->client->get($uri)->send()->getBody(true);
-        } catch (RequestException $e) {
-            throw new RuntimeException(sprintf('Unable to fetch data for %s', $targetEntity), $e->getCode(), $e);
-        }
+        $res = $this->client->get($uri)->getBody();
 
         $data = json_decode($res, true);
 

@@ -1,8 +1,11 @@
 <?php
 
+/** @noinspection PhpUnused */
+
 namespace RabbitMQ\Management;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use Exception;
 use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Entity\Channel;
 use RabbitMQ\Management\Entity\Connection;
@@ -10,18 +13,15 @@ use RabbitMQ\Management\Entity\Exchange;
 use RabbitMQ\Management\Entity\Queue;
 use RabbitMQ\Management\Entity\EntityInterface;
 use RabbitMQ\Management\Exception\InvalidArgumentException;
-use React\Dns\Resolver\Factory as DnsResolverFactory;
-use React\HttpClient\ConnectionManager;
-use React\HttpClient\SecureConnectionManager;
 use React\HttpClient\Client;
-use React\Curry\Util as Curry;
-use React\HttpClient\Response;
 use React\Promise\Deferred;
+use React\HttpClient\Response;
+use function React\Partial\bind;
 
 class AsyncAPIClient
 {
     /**
-     * @var \React\HttpClient\Client
+     * @var Client
      */
     private $client;
     private $hydrator;
@@ -30,21 +30,16 @@ class AsyncAPIClient
     public static function factory($loop, array $options = array())
     {
         $defaultOptions = array(
-            'port'     => 15672,
-            'user'     => 'guest',
+            'port' => 15672,
+            'user' => 'guest',
             'password' => 'guest',
-            'scheme'   => 'http',
-            'url'      => '127.0.0.1',
+            'scheme' => 'http',
+            'url' => '127.0.0.1',
         );
 
         $options = array_merge($defaultOptions, $options);
 
-        $dnsResolverFactory = new DnsResolverFactory();
-        $dnsResolver = $dnsResolverFactory->createCached('8.8.8.8', $loop);
-
-        $connectionManager = new ConnectionManager($loop, $dnsResolver);
-        $secureConnectionManager = new SecureConnectionManager($loop, $dnsResolver);
-        $client = new Client($loop, $connectionManager, $secureConnectionManager);
+        $client = new Client($loop);
 
         return new self($client, $options);
     }
@@ -59,47 +54,45 @@ class AsyncAPIClient
     public function listConnections()
     {
         return $this->executeRequest('GET', '/api/connections')
-                ->then(Curry::bind(array($this, 'handleCollectionData'), 'Connection'));
+            ->then(bind(array($this, 'handleCollectionData'), 'Connection'));
     }
 
     public function getConnection($name)
     {
-        return $this->executeRequest('GET', sprintf('/api/connections/%s', urlencode($name)))
-                ->then(Curry::bind(array($this, 'handleEntityData'), new Connection()));
+        return $this->executeRequest('GET', sprintf('/api/connections/%s', rawurlencode($name)))
+            ->then(bind(array($this, 'handleEntityData'), new Connection()));
     }
 
     public function deleteConnection($name)
     {
-        return $this->executeRequest('DELETE', sprintf('/api/connections/%s', urlencode($name)));
+        return $this->executeRequest('DELETE', sprintf('/api/connections/%s', rawurlencode($name)));
     }
 
     private function executeRequest($method, $uri, $body = null)
     {
         $deferred = new Deferred();
-        $request = $this->client->request($method, $this->buildUrl($uri), array('Content-Length' => strlen($body), 'Authorization'  => 'Basic ' . base64_encode($this->options['user'] . ':' . $this->options['password']), 'Content-Type'   => 'application/json'));
+        $request = $this->client->request($method, $this->buildUrl($uri), array('Content-Length' => strlen($body), 'Authorization' => 'Basic ' . base64_encode($this->options['user'] . ':' . $this->options['password']), 'Content-Type' => 'application/json'));
 
-        $request->writeHead();
-
-        $request->on('error', function ($error) use ($uri, $deferred) {
+        $request->on('error', function (Exception $error) use ($uri, $deferred) {
             $deferred->reject(sprintf('Error while doing the request on %s : %s', $uri, $error->getMessage()));
         });
 
-        $request->on('response', function(Response $response) use ($deferred) {
+        $request->on('response', function (Response $response) use ($deferred) {
             if ($response->getCode() < 200 || $response->getCode() >= 400) {
                 $deferred->reject(sprintf('The response is not as expected (status code %s, message is %s)', $response->getCode(), $response->getReasonPhrase()));
             }
 
-            $response->on('error', function($error) use ($deferred) {
+            $response->on('error', function (Exception $error) use ($deferred) {
                 $deferred->reject($error->getMessage());
             });
 
-            $data = (object) array('data' => '');
+            $data = (object)array('data' => '');
 
-            $response->on('data', function($chunk) use ($data) {
+            $response->on('data', function ($chunk) use ($data) {
                 $data->data .= $chunk;
             });
 
-            $response->on('end', function() use ($deferred, $data) {
+            $response->on('end', function () use ($deferred, $data) {
                 $deferred->resolve($data->data);
             });
         });
@@ -112,25 +105,25 @@ class AsyncAPIClient
     public function listChannels()
     {
         return $this->executeRequest('GET', '/api/channels')
-                ->then(Curry::bind(array($this, 'handleCollectionData'), 'Channel'));
+            ->then(bind(array($this, 'handleCollectionData'), 'Channel'));
     }
 
     public function getChannel($name, Channel $channel = null)
     {
-        return $this->executeRequest('GET', sprintf('/api/channels/%s', urlencode($name)))
-                ->then(Curry::bind(array($this, 'handleEntityData'), $channel ? : new Channel()));
+        return $this->executeRequest('GET', sprintf('/api/channels/%s', rawurlencode($name)))
+            ->then(bind(array($this, 'handleEntityData'), $channel ?: new Channel()));
     }
 
     public function listExchanges($vhost = null)
     {
         if (null !== $vhost) {
-            $uri = sprintf('/api/exchanges/%s', urlencode($vhost));
+            $uri = sprintf('/api/exchanges/%s', rawurlencode($vhost));
         } else {
             $uri = '/api/exchanges';
         }
 
         return $this->executeRequest('GET', $uri)
-                ->then(Curry::bind(array($this, 'handleCollectionData'), 'Exchange'));
+            ->then(bind(array($this, 'handleCollectionData'), 'Exchange'));
     }
 
     public function getExchange($vhost, $name, Exchange $exchange = null)
@@ -143,8 +136,8 @@ class AsyncAPIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        return $this->executeRequest('GET', sprintf('/api/exchanges/%s/%s', urlencode($vhost), urlencode($name)))
-                ->then(Curry::bind(array($this, 'handleEntityData'), $exchange ? : new Exchange()));
+        return $this->executeRequest('GET', sprintf('/api/exchanges/%s/%s', rawurlencode($vhost), rawurlencode($name)))
+            ->then(bind(array($this, 'handleEntityData'), $exchange ?: new Exchange()));
     }
 
     public function deleteExchange($vhost, $name)
@@ -157,7 +150,7 @@ class AsyncAPIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        return $this->executeRequest('DELETE', sprintf('/api/exchanges/%s/%s', urlencode($vhost), urlencode($name)));
+        return $this->executeRequest('DELETE', sprintf('/api/exchanges/%s/%s', rawurlencode($vhost), rawurlencode($name)));
     }
 
     public function refreshExchange(Exchange $exchange)
@@ -175,26 +168,26 @@ class AsyncAPIClient
             throw new InvalidArgumentException('Exchange requires a name');
         }
 
-        return $this->executeRequest('PUT', sprintf('/api/exchanges/%s/%s', urlencode($exchange->vhost), urlencode($exchange->name)), $exchange->toJson())
-                ->then(Curry::bind(array($this, 'getExchange'), $exchange->vhost, $exchange->name, $exchange));
+        return $this->executeRequest('PUT', sprintf('/api/exchanges/%s/%s', rawurlencode($exchange->vhost), rawurlencode($exchange->name)), $exchange->toJson())
+            ->then(bind(array($this, 'getExchange'), $exchange->vhost, $exchange->name, $exchange));
     }
 
     public function listQueues($vhost = null)
     {
         if (null !== $vhost) {
-            $uri = sprintf('/api/queues/%s', urlencode($vhost));
+            $uri = sprintf('/api/queues/%s', rawurlencode($vhost));
         } else {
             $uri = '/api/queues';
         }
 
         return $this->executeRequest('GET', $uri)
-                ->then(Curry::bind(array($this, 'handleCollectionData'), 'Queue'));
+            ->then(bind(array($this, 'handleCollectionData'), 'Queue'));
     }
 
     public function getQueue($vhost, $name, Queue $queue = null)
     {
-        return $this->executeRequest('GET', sprintf('/api/queues/%s/%s', urlencode($vhost), urlencode($name)))
-                ->then(Curry::bind(array($this, 'handleEntityData'), $queue ? : new Queue()));
+        return $this->executeRequest('GET', sprintf('/api/queues/%s/%s', rawurlencode($vhost), rawurlencode($name)))
+            ->then(bind(array($this, 'handleEntityData'), $queue ?: new Queue()));
     }
 
     public function refreshQueue(Queue $queue)
@@ -212,8 +205,8 @@ class AsyncAPIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        return $this->executeRequest('PUT', sprintf('/api/queues/%s/%s', urlencode($queue->vhost), urlencode($queue->name)), $queue->toJson())
-                ->then(Curry::bind(array($this, 'getQueue'), $queue->vhost, $queue->name, $queue));
+        return $this->executeRequest('PUT', sprintf('/api/queues/%s/%s', rawurlencode($queue->vhost), rawurlencode($queue->name)), $queue->toJson())
+            ->then(bind(array($this, 'getQueue'), $queue->vhost, $queue->name, $queue));
     }
 
     public function deleteQueue($vhost, $name)
@@ -226,7 +219,7 @@ class AsyncAPIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        return $this->executeRequest('DELETE', sprintf('/api/queues/%s/%s', urlencode($vhost), urlencode($name)));
+        return $this->executeRequest('DELETE', sprintf('/api/queues/%s/%s', rawurlencode($vhost), rawurlencode($name)));
     }
 
     public function purgeQueue($vhost, $name)
@@ -239,36 +232,36 @@ class AsyncAPIClient
             throw new InvalidArgumentException('Queue requires a name');
         }
 
-        return $this->executeRequest('DELETE', sprintf('/api/queues/%s/%s/contents', urlencode($vhost), urlencode($name)))
-                ->then(Curry::bind(array($this, 'getQueue'), $vhost, $name, null));
+        return $this->executeRequest('DELETE', sprintf('/api/queues/%s/%s/contents', rawurlencode($vhost), rawurlencode($name)))
+            ->then(bind(array($this, 'getQueue'), $vhost, $name, null));
     }
 
     public function listBindingsByQueue(Queue $queue)
     {
-        $uri = sprintf('/api/queues/%s/%s/bindings', urlencode($queue->vhost), urlencode($queue->name));
+        $uri = sprintf('/api/queues/%s/%s/bindings', rawurlencode($queue->vhost), rawurlencode($queue->name));
 
         return $this->executeRequest('GET', $uri)
-                ->then(Curry::bind(array($this, 'handleCollectionData'), 'Binding'));
+            ->then(bind(array($this, 'handleCollectionData'), 'Binding'));
     }
 
     public function listBindingsByExchangeAndQueue($vhost, $exchange, $queue)
     {
-        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', urlencode($vhost), urlencode($exchange), urlencode($queue));
+        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', rawurlencode($vhost), rawurlencode($exchange), rawurlencode($queue));
 
         return $this->executeRequest('GET', $uri)
-                ->then(Curry::bind(array($this, 'handleCollectionData'), 'Binding'));
+            ->then(bind(array($this, 'handleCollectionData'), 'Binding'));
     }
 
     public function addBinding(Binding $binding)
     {
-        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', urlencode($binding->vhost), urlencode($binding->source), urlencode($binding->destination));
+        $uri = sprintf('/api/bindings/%s/e/%s/q/%s', rawurlencode($binding->vhost), rawurlencode($binding->source), rawurlencode($binding->destination));
 
         return $this->executeRequest('POST', $uri, $binding->toJson());
     }
 
     public function deleteBinding(Binding $binding)
     {
-        $uri = sprintf('/api/bindings/%s/e/%s/q/%s/%s', urlencode($binding->vhost), urlencode($binding->source), urlencode($binding->destination), urlencode($binding->properties_key));
+        $uri = sprintf('/api/bindings/%s/e/%s/q/%s/%s', rawurlencode($binding->vhost), rawurlencode($binding->source), rawurlencode($binding->destination), rawurlencode($binding->properties_key));
 
         return $this->executeRequest('DELETE', $uri);
     }
@@ -276,33 +269,33 @@ class AsyncAPIClient
     public function listBindings($vhost = null)
     {
         if (null !== $vhost) {
-            $uri = sprintf('/api/bindings/%s', urlencode($vhost));
+            $uri = sprintf('/api/bindings/%s', rawurlencode($vhost));
         } else {
             $uri = '/api/bindings';
         }
 
         return $this->executeRequest('GET', $uri)
-                ->then(Curry::bind(array($this, 'handleCollectionData'), 'Binding'));
+            ->then(bind(array($this, 'handleCollectionData'), 'Binding'));
     }
 
     public function alivenessTest($vhost)
     {
         $that = $this;
-        return $this->executeRequest('GET', sprintf('/api/aliveness-test/%s', urlencode($vhost)))
-                ->then(function($data) use ($that, $vhost) {
-                    $data = json_decode($data, true);
+        return $this->executeRequest('GET', sprintf('/api/aliveness-test/%s', rawurlencode($vhost)))
+            ->then(function ($data) use ($that, $vhost) {
+                $data = json_decode($data, true);
 
-                    if (!isset($data['status']) || $data['status'] !== 'ok') {
+                if (!isset($data['status']) || $data['status'] !== 'ok') {
+                    return false;
+                }
+
+                return $that->deleteQueue($vhost, 'aliveness-test')
+                    ->then(function () {
+                        return true;
+                    }, function () {
                         return false;
-                    }
-
-                    return $that->deleteQueue($vhost, 'aliveness-test')
-                        ->then(function() {
-                                return true;
-                            }, function() {
-                                return false;
-                            });
-                });
+                    });
+            });
     }
 
     public function handleEntityData(EntityInterface $entity, $rawData)
