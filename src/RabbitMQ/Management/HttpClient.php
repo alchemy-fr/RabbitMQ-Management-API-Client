@@ -2,8 +2,8 @@
 
 namespace RabbitMQ\Management;
 
-use Guzzle\Common\Collection;
-use Guzzle\Service\Client;
+
+use GuzzleHttp\Client;
 use RabbitMQ\Management\Exception\RuntimeException;
 
 class HttpClient extends Client
@@ -36,18 +36,50 @@ class HttpClient extends Client
     public static function factory($options = array())
     {
         $default = array(
-            'base_url' => '{scheme}://{username}:{password}@{host}:{port}',
-            'scheme'   => 'http',
+            'base_uri' => '{scheme}://{username}:{password}@{host}:{port}/',
+            'scheme' => 'http',
             'username' => 'guest',
             'password' => 'guest',
-            'port'     => '15672',
+            'port' => '15672',
         );
 
-        $required = array('username', 'password', 'host', 'base_url');
-        $config = Collection::fromConfig($options, $default, $required);
+        /* accommodate legacy clients of this library using base_url where Guzzle now wants base_uri */
+        if(array_key_exists('base_url',$options) and !array_key_exists('base_uri',$options)) {
+            $options['base_uri']=$options['base_url'];
+            unset($options['base_url']);
+        }
 
-        $client = new self($config->get('base_url'), $config);
+        $required = array('username', 'password', 'host', 'base_uri');
+        $config = array_merge($default,$options);
+        if ($missing = array_diff($required, array_keys($config))) {
+            throw new RuntimeException('Config is missing the following keys: ' . implode(', ', $missing));
+        }
+
+        foreach ($config as $key => $value) {
+            if ($key === 'base_uri') {
+                continue;
+            }
+            $config['base_uri'] = str_replace('{' . $key . '}', $value, $config['base_uri']);
+        }
+
+
+        $client = new self($config);
+
 
         return $client;
+    }
+
+    /* This is excerpted from the old Guzzle\Common\Collection code (now no longer present in Guzzle) to accommodate
+        the usage of it above
+    */
+    private static function fromConfig(array $config = array(), array $defaults = array(), array $required = array()): array
+    {
+        $data = $config + $defaults;
+
+        if ($missing = array_diff($required, array_keys($data))) {
+            throw new RuntimeException('Config is missing the following keys: ' . implode(', ', $missing));
+        }
+
+        return $data;
     }
 }

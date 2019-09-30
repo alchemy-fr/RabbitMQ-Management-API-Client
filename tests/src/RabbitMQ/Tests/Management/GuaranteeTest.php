@@ -1,14 +1,18 @@
-<?php
+<?php /** @noinspection DuplicatedCode */
+
+/** @noinspection PhpUndefinedNamespaceInspection */
+/** @noinspection PhpUnhandledExceptionInspection */
 
 namespace RabbitMQ\Tests\Management;
 
+use PHPUnit\Framework\TestCase;
 use RabbitMQ\Management\APIClient;
 use RabbitMQ\Management\Guarantee;
 use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Entity\Exchange;
 use RabbitMQ\Management\Entity\Queue;
 
-class GuaranteeTest extends \PHPUnit_Framework_TestCase
+class GuaranteeTest extends TestCase
 {
     /**
      * @var Guarantee
@@ -21,7 +25,7 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
      */
     protected $client;
 
-    protected function setUp()
+    protected function setUp() : void
     {
         $this->client = APIClient::factory(array('host' => 'localhost'));
         $this->object = new Guarantee($this->client);
@@ -424,6 +428,8 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
      */
     public function testEnsureBinding()
     {
+        $this->expectNotToPerformAssertions();
+
         $exchange = new Exchange();
         $exchange->type = 'fanout';
         $exchange->vhost = '/';
@@ -466,6 +472,8 @@ class GuaranteeTest extends \PHPUnit_Framework_TestCase
      */
     public function testEnsureBindingAlreadyBound()
     {
+        $this->expectNotToPerformAssertions();
+
         $exchange = new Exchange();
         $exchange->type = 'fanout';
         $exchange->vhost = '/';

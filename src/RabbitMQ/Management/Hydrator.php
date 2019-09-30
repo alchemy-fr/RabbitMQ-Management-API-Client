@@ -20,9 +20,11 @@ class Hydrator
     public function hydrate(EntityInterface $entity, $data)
     {
         foreach ($data as $key => $value) {
+            /*
             if (!property_exists($entity, $key)) {
                 throw new \InvalidArgumentException(sprintf('Entity %s does not have property %s', get_class($entity), $key));
             }
+            */
             $entity->{$key} = $value;
         }
 
