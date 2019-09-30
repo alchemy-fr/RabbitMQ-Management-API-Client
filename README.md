@@ -3,7 +3,7 @@
 [![Build Status](https://secure.travis-ci.org/alchemy-fr/RabbitMQ-Management-API-Client.png?branch=master)](https://travis-ci.org/alchemy-fr/RabbitMQ-Management-API-Client)
 
 **Update:** This branch is an update to this library to allow it to work with modern (circa 2019) versions of
-PHP, RabbitMQ, Guzzle, React, Doctrine, PHPUnit and related support libraries. (see composer.json for 
+PHP (>=7.2), RabbitMQ, Guzzle, React, Doctrine, PHPUnit and related support libraries. (see composer.json for 
 version details) The existing version had too many dependencies on deprecated versions of other libraries
 preventing it from being utilized on new projects.  This update fixes that. 
  
