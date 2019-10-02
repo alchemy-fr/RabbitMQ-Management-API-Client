@@ -16,6 +16,21 @@ where previously some were RabbitMQ&#92;Management&#92;Exception&#92;RuntimeExce
 underlying Guzzle library are now passed through as GuzzleHttp&#92;Exception&#92;ClientException rather than
 GuzzleHttp&#92;Exception&#92;RequestException due to changes in Guzzle. 
 
+Note that the properties and format thereof returned in queries are dependent on 
+the rabbitmq server version.  The properties defined in the Entity classes of
+this package have been updated to include those provided by RabbitMQ 3.8 (with some
+older ones retained but not necessarily populated.)  These are primarily
+provided for reference and code hinting in IDEs but your results may
+vary with an actual server.  Differences between the defined entity classes
+and the properties returned by the server are silently ignored and all
+results returned are passed through.
+
+Note also that due to management api caching and statistics collection
+intervals, the results returned from queries may be incomplete or delayed.
+Creating an object and then immediately querying it may yield incomplete
+or missing results.   Because of this, the unit tests have built in delays
+to wait before checking the returned results in various tests.  
+
 *(end update message)*
 
 This library is intended to help management of RabbitMQ server in an application.

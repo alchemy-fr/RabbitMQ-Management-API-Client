@@ -17,6 +17,7 @@ class Exchange extends AbstractEntity
     public $arguments = array();
     public $message_stats = array();
     public $policy;
+    public $user_who_performed_action;
 
     protected function getJsonParameters()
     {

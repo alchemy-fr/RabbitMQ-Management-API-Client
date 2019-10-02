@@ -16,6 +16,7 @@ use RabbitMQ\Management\Entity\Queue;
 use RabbitMQ\Management\Exception\EntityNotFoundException;
 use RabbitMQ\Management\Exception\PreconditionFailedException;
 use RabbitMQ\Management\HttpClient;
+use RabbitMQ\Management\Hydrator;
 
 
 class APIClientTest extends TestCase
@@ -109,10 +110,12 @@ class APIClientTest extends TestCase
         $connections = $this->object->listConnections()->toArray();
         $expectedConnection = array_pop($connections);
 
+        Hydrator::requestOneShotAudit(6);
         $connection = $this->object->getConnection($expectedConnection->name);
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Connection', $connection);
+        $this->assertTrue(Hydrator::getLastAuditStatus(),"audit failed");
 
-        $this->assertEquals($expectedConnection, $connection);
+        $this->assertEquals($expectedConnection->name, $connection->name);
     }
 
     public function testDeleteConnection(): void
@@ -162,8 +165,10 @@ class APIClientTest extends TestCase
         $channels = $this->object->listChannels()->toArray();
         $expectedChannel = array_pop($channels);
 
+        Hydrator::requestOneShotAudit(6);
         $channel = $this->object->getChannel($expectedChannel->name);
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Channel', $channel);
+        $this->assertTrue(Hydrator::getLastAuditStatus(),"audit failed");
 
         $this->assertEquals($expectedChannel->name, $channel->name);
     }
@@ -201,10 +206,12 @@ class APIClientTest extends TestCase
         $exchanges = $this->object->listExchanges()->toArray();
         $expectedExchange = array_pop($exchanges);
 
+        Hydrator::requestOneShotAudit(6);
         $exchange = $this->object->getExchange($expectedExchange->vhost, $expectedExchange->name);
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
+        $this->assertTrue(Hydrator::getLastAuditStatus(),"audit failed");
 
-        $this->assertEquals($expectedExchange, $exchange);
+        $this->assertEquals($expectedExchange->name, $exchange->name);
     }
 
 
@@ -249,7 +256,7 @@ class APIClientTest extends TestCase
 
         $foundExchange = $this->object->getExchange($exchange->vhost, $exchange->name);
 
-        $this->assertEquals($exchange, $foundExchange);
+        $this->assertEquals($exchange->name, $foundExchange->name);
 
         $this->object->deleteExchange('/', self::EXCHANGE_TEST_NAME);
     }
@@ -308,9 +315,8 @@ class APIClientTest extends TestCase
         $queue->vhost = '/';
         $queue->name = self::QUEUE_TEST_NAME;
 
-        $this->object->addQueue($queue);
+        return $this->object->addQueue($queue);
 
-        return $queue;
     }
 
     public function testListQueuesWithVhost(): void
@@ -334,15 +340,12 @@ class APIClientTest extends TestCase
 
     public function testGetQueue(): void
     {
-        $this->createQueue();
+        $expectedQueue=$this->createQueue();
 
-        $queues = $this->object->listQueues()->toArray();
-        $expectedQueue = array_pop($queues);
-
-        $this->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $expectedQueue);
-
+        Hydrator::requestOneShotAudit(6);
         $queue = $this->object->getQueue($expectedQueue->vhost, $expectedQueue->name);
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $queue);
+        $this->assertTrue(Hydrator::getLastAuditStatus(),"audit failed");
 
         $this->assertEquals($expectedQueue->vhost, $queue->vhost);
         $this->assertEquals($expectedQueue->name, $queue->name);
@@ -364,7 +367,7 @@ class APIClientTest extends TestCase
 
         $foundQueue = $this->object->getQueue($queue->vhost, $queue->name);
 
-        $this->assertEquals($queue, $foundQueue);
+        $this->assertEquals($queue->name, $foundQueue->name);
 
         $this->object->deleteQueue('/', self::QUEUE_TEST_NAME);
     }

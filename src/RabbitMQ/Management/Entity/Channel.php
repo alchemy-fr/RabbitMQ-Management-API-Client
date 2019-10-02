@@ -4,28 +4,34 @@ namespace RabbitMQ\Management\Entity;
 
 class Channel extends AbstractEntity
 {
-    public $connection_details;
-    public $consumer_details = array();
-    public $idle_since;
-    public $transactional;
-    public $confirm;
-    public $consumer_count;
-    public $messages_unacknowledged;
-    public $messages_unconfirmed;
-    public $messages_uncommitted;
-    public $message_stats;
     public $acks_uncommitted;
-    public $publishes;
-    public $prefetch_count;
     public $client_flow_blocked;
-    public $node;
-    public $name;
-    public $number;
-    public $user;
-    public $vhost;
+    public $confirm;
+    public $connection_details;
+    public $consumer_count;
+    public $consumer_details = array();
     public $deliveries = array();
     public $global_prefetch_count;
+    public $idle_since;
+    public $message_stats;
+    public $messages_unacknowledged;
+    public $messages_uncommitted;
+    public $messages_unconfirmed;
+    public $name;
+    public $node;
+    public $number;
+    public $prefetch_count;
+    public $publishes;
     public $state;
+    public $transactional;
+    public $user;
+    public $vhost;
+    public $garbage_collection;
+    public $pending_raft_commands;
+    public $reductions;
+    public $reductions_details;
+    public $user_who_performed_action;
+
 
     protected function getJsonParameters()
     {

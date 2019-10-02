@@ -123,7 +123,7 @@ class AsyncAPIClientTest extends TestCase
         $connection = $this->waitForPromiseToFulfill($this->object->getConnection($expectedConnection->name));
 
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Connection', $connection);
-        $this->assertEquals($expectedConnection, $connection);
+        $this->assertEquals($expectedConnection->name, $connection->name);
     }
 
     public function testDeleteConnection()
@@ -178,7 +178,7 @@ class AsyncAPIClientTest extends TestCase
 
         $channel = $this->waitForPromiseToFulfill($this->object->getChannel($expectedChannel->name));
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Channel', $channel);
-        $this->assertEquals($expectedChannel->toJson(), $channel->toJson());
+        $this->assertEquals($expectedChannel->name, $channel->name);
 
     }
 
@@ -214,7 +214,7 @@ class AsyncAPIClientTest extends TestCase
 
         $exchange = $this->waitForPromiseToFulfill($this->object->getExchange($expectedExchange->vhost, $expectedExchange->name));
         $this->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
-        $this->assertEquals($expectedExchange, $exchange);
+        $this->assertEquals($expectedExchange->name, $exchange->name);
     }
 
     public function testGetExchangeFailed()
@@ -249,7 +249,7 @@ class AsyncAPIClientTest extends TestCase
         $exchange->durable = true;
 
         $resultExchange = $this->waitForPromiseToFulfill($this->object->addExchange($exchange));
-        $this->assertEquals($resultExchange->toJson(), $exchange->toJson());
+        $this->assertEquals($resultExchange->name, $exchange->name);
     }
 
     public function testAddExchangeFailed()
@@ -328,7 +328,7 @@ class AsyncAPIClientTest extends TestCase
 
         $returnedQueue = $this->waitForPromiseToFulfill($this->object->addQueue($queue));
         $this->assertInstanceOf('RabbitMQ\\Management\\Entity\\Queue', $returnedQueue);
-        $this->assertEquals($returnedQueue->toJson(), $queue->toJson());
+        $this->assertEquals($returnedQueue->name, $queue->name);
 
         $this->syncClient->deleteQueue('/', self::QUEUE_TEST_NAME);
     }
