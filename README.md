@@ -2,6 +2,37 @@
 
 [![Build Status](https://secure.travis-ci.org/alchemy-fr/RabbitMQ-Management-API-Client.png?branch=master)](https://travis-ci.org/alchemy-fr/RabbitMQ-Management-API-Client)
 
+**Update:** This branch is an update to this library to allow it to work with modern (circa 2019) versions of
+PHP (>=7.2), RabbitMQ, Guzzle, React, Doctrine, PHPUnit and related support libraries. (see composer.json for 
+version details) The existing version had too many dependencies on deprecated versions of other libraries
+preventing it from being utilized on new projects.  This update fixes that. 
+ 
+Extensive changes were needed under the hood but the API should remain nearly 
+identical with the exception of the exceptions thrown from the non-async client code.  
+
+Cases involving a non-existent entity (now including Add methods, such as trying to add a binding to a 
+non-existant vhost) are now uniformly thrown as RabbitMQ&#92;Management&#92;Exception&#92;EntityNotFoundException
+where previously some were RabbitMQ&#92;Management&#92;Exception&#92;RuntimeException.   Other exceptions from the 
+underlying Guzzle library are now passed through as GuzzleHttp&#92;Exception&#92;ClientException rather than
+GuzzleHttp&#92;Exception&#92;RequestException due to changes in Guzzle. 
+
+Note that the properties and format thereof returned in queries are dependent on 
+the rabbitmq server version.  The properties defined in the Entity classes of
+this package have been updated to include those provided by RabbitMQ 3.8 (with some
+older ones retained but not necessarily populated.)  These are primarily
+provided for reference and code hinting in IDEs but your results may
+vary with an actual server.  Differences between the defined entity classes
+and the properties returned by the server are silently ignored and all
+results returned are passed through.
+
+Note also that due to management api caching and statistics collection
+intervals, the results returned from queries may be incomplete or delayed.
+Creating an object and then immediately querying it may yield incomplete
+or missing results.   Because of this, the unit tests have built in delays
+to wait before checking the returned results in various tests.  
+
+*(end update message)*
+
 This library is intended to help management of RabbitMQ server in an application.
 It provides two ways to query RabbitMQ : Synchronous query with Guzzle and
 Asynchronous query with React.

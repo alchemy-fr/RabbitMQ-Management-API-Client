@@ -1,38 +1,42 @@
 {
-    "name": "alchemy/rabbitmq-management-client",
-    "type": "library",
-    "description": "RabbitMQ Management Plugin API Client",
-    "keywords": ["api", "rabbitmq", "management"],
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Romain Neutron",
-            "email": "imprec@gmail.com"
-        }
-    ],
-    "require": {
-        "doctrine/common": ">=2.0",
-        "guzzlehttp/guzzle": "~3.0"
-    },
-    "require-dev": {
-        "videlalvaro/php-amqplib": "dev-master@dev",
-        "sami/sami": "~1.0",
-        "phpunit/phpunit": "~3.7",
-        "react/promise": "~1.0",
-        "react/react": "~0.2.0",
-        "react/curry": "~1.0"
-    },
-    "autoload": {
-        "psr-0": {
-            "RabbitMQ": "src"
-        }
-    },
-    "suggest": {
-        "react/react": "Version 0.2 to use the async client"
-    },
-    "extra": {
-        "branch-alias": {
-            "dev-master": "0.1.x-dev"
-        }
+  "name": "alchemy/rabbitmq-management-client",
+  "type": "library",
+  "description": "RabbitMQ Management Plugin API Client",
+  "keywords": [
+    "api",
+    "rabbitmq",
+    "management"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Romain Neutron",
+      "email": "imprec@gmail.com"
     }
+  ],
+  "require": {
+    "doctrine/common": ">=2.6.3",
+    "guzzlehttp/guzzle": ">=6.3.3",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "php-amqplib/php-amqplib": "dev-master",
+    "phpunit/phpunit": ">=7.0",
+    "react/http-client": "^0.5.9",
+    "react/partial": "~2.0",
+    "seregazhuk/react-promise-testing": "dev-master"
+  },
+  "autoload": {
+    "psr-0": {
+      "RabbitMQ": "src"
+    }
+  },
+  "suggest": {
+    "react/react": "Version 0.2 to use the async client"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-master": "0.1.x-dev"
+    }
+  }
 }

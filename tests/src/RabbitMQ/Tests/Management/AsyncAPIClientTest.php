@@ -1,17 +1,26 @@
 <?php
 
+/** @noinspection MissingReturnTypeInspection */
+/** @noinspection MethodShouldBeFinalInspection */
+/** @noinspection DuplicatedCode */
+/** @noinspection PhpUnhandledExceptionInspection */
+
 namespace RabbitMQ\Tests\Management;
 
-use PhpAmqpLib\Connection\AMQPConnection;
+use Exception;
 use PhpAmqpLib\Channel\AMQPChannel;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
 use RabbitMQ\Management\APIClient;
 use RabbitMQ\Management\AsyncAPIClient;
-use RabbitMQ\Management\HttpClient;
+use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Entity\Exchange;
 use RabbitMQ\Management\Entity\Queue;
-use RabbitMQ\Management\Entity\Binding;
+use RabbitMQ\Management\Exception\EntityNotFoundException;
+use RabbitMQ\Management\HttpClient;
+use React\EventLoop\Factory;
+use seregazhuk\React\PromiseTesting\TestCase;
 
-class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
+class AsyncAPIClientTest extends TestCase
 {
     const EXCHANGE_TEST_NAME = 'phrasea.baloo';
     const QUEUE_TEST_NAME = 'phrasea.queue.baloo';
@@ -27,223 +36,190 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
     protected $loop;
 
     /**
-     * @var AMQPConnection
+     * @var AMQPStreamConnection
      */
-    protected $conn;
+    protected $conn = null;
 
     /**
      * @var AMQPChannel
      */
-    protected $channel;
+    protected $channel = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->loop = \React\EventLoop\Factory::create();
-        $this->object = AsyncAPIClient::factory($this->loop, array('host'             => '127.0.0.1'));
+        $this->loop = Factory::create();
+        $this->object = AsyncAPIClient::factory($this->loop, array('host' => '127.0.0.1'));
 
-        $this->syncClientClient = HttpClient::factory(array('host'         => 'localhost'));
+        $this->syncClientClient = HttpClient::factory(array('host' => 'localhost'));
         $this->syncClient = new APIClient($this->syncClientClient);
 
-        $this->conn = new \PhpAmqpLib\Connection\AMQPConnection('localhost', 5672, 'guest', 'guest', '/');
-        $this->channel = $this->conn->channel();
+        /* might be left over from previous failed test */
+        $this->cleanupTestObjects();
     }
 
-    public function tearDown()
+
+    public function tearDown(): void
     {
+        $this->cleanupTestObjects();
+
+        try {
+            if ($this->channel != null) {
+                $this->channel->close();
+            }
+            if ($this->conn != null) {
+                $this->conn->close();
+            }
+        } catch (Exception $e) {
+            /* don't care */
+        }
+    }
+
+    private function cleanupTestObjects(): void
+    {
+        /* do not combine into one try/catch block because we want both to be tried even if first fails */
         try {
             $this->syncClient->deleteQueue('/', self::QUEUE_TEST_NAME);
-        } catch (\Exception $e) {
-
+        } catch (EntityNotFoundException $e) {
+            /* might not exist, don't care if fails */
         }
         try {
             $this->syncClient->deleteExchange('/', self::EXCHANGE_TEST_NAME);
-        } catch (\Exception $e) {
-
+        } catch (EntityNotFoundException $e) {
+            /* might not exist, don't care if fails */
         }
+    }
 
-        $this->channel->close();
-        $this->conn->close();
+    private function needConnection(): void
+    {
+        $this->conn = new AMQPStreamConnection('localhost', 5672, 'guest', 'guest', '/');
+        $this->channel = $this->conn->channel();
+
+        /* attempting to see own connection just made, management api may delay showing it, so wait before testing */
+        sleep(5);
+
     }
 
     public function testListConnections()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
+        $this->needConnection();
 
-        $this->object->listConnections()
-            ->then(function($connections) use ($PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($connections);
-                foreach ($connections as $connection) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Connection', $connection);
-                }
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
+        $connections = $this->waitForPromiseToFulfill($this->object->listConnections());
 
-        $loop->run();
+        $this->assertNonEmptyArrayCollection($connections);
+        foreach ($connections as $connection) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Connection', $connection);
+        }
+
     }
+
 
     public function testGetConnection()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
+        $this->needConnection();
 
         $connections = $this->syncClient->listConnections()->toArray();
         $expectedConnection = array_pop($connections);
 
-        $this->object->getConnection($expectedConnection->name)
-            ->then(function($connection) use ($expectedConnection, $PHPUnit, $loop) {
-                $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Connection', $connection);
-                $PHPUnit->assertEquals($expectedConnection, $connection);
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
+        $connection = $this->waitForPromiseToFulfill($this->object->getConnection($expectedConnection->name));
 
-        $loop->run();
+        $this->assertInstanceOf('RabbitMQ\Management\Entity\Connection', $connection);
+        $this->assertEquals($expectedConnection->name, $connection->name);
     }
 
     public function testDeleteConnection()
     {
-        $this->markTestSkipped('Not working ?!');
+        $this->needConnection();
+
+        $connections = $this->syncClient->listConnections()->toArray();
+        $expectedConnection = array_pop($connections);
+
+        $this->waitForPromiseToFulfill($this->object->deleteConnection($expectedConnection->name));
+
+        /* make sure we don't try to tear down */
+        $this->channel = null;
+        $this->conn = null;
+
+        /* wait for info to update on server */
+        sleep(10);
+
+        /* its either going to return the connection in closed state */
+        try {
+            $expectedConnection = $this->syncClient->getConnection($expectedConnection->name);
+            if ($expectedConnection->state == "closed") {
+                $success = true;
+            }
+        } catch (EntityNotFoundException $e) {
+            $this->assertContains("Failed to find connection", $e->getMessage());
+            $success = true;
+        }
+        $this->assertEquals(true, $success);
+
     }
 
     public function testListChannels()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
+        $this->needConnection();
 
-        $this->object->listChannels()
-            ->then(function($channels) use ($PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($channels);
-                foreach ($channels as $channel) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Channel', $channel);
-                }
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
+        $channels = $this->waitForPromiseToFulfill($this->object->listChannels());
 
-        $loop->run();
+        $this->assertNonEmptyArrayCollection($channels);
+        foreach ($channels as $channel) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Channel', $channel);
+        }
     }
 
     public function testGetChannel()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
+        $this->needConnection();
 
         $channels = $this->syncClient->listChannels()->toArray();
+        $this->assertNotEmpty($channels);
         $expectedChannel = array_pop($channels);
 
-        $this->object->getConnection($expectedChannel->name)
-            ->then(function($channel) use ($expectedChannel, $PHPUnit, $loop) {
-                $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Channel', $channel);
-                $PHPUnit->assertEquals($expectedChannel, $channel);
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
+        $channel = $this->waitForPromiseToFulfill($this->object->getChannel($expectedChannel->name));
+        $this->assertInstanceOf('RabbitMQ\Management\Entity\Channel', $channel);
+        $this->assertEquals($expectedChannel->name, $channel->name);
 
-        $loop->run();
     }
 
     public function testListExchanges()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
+        $exchanges = $this->waitForPromiseToFulfill($this->object->listExchanges());
+        $this->assertNonEmptyArrayCollection($exchanges);
+        foreach ($exchanges as $exchange) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
+        }
 
-        $this->object->listExchanges()
-            ->then(function($exchanges) use ($PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($exchanges);
-                foreach ($exchanges as $exchange) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
-                }
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
     }
 
     public function testListExchangesWithVhost()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->listExchanges(self::VIRTUAL_HOST)
-            ->then(function($exchanges) use ($PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($exchanges);
-                foreach ($exchanges as $exchange) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
-                    $PHPUnit->assertEquals($PHPUnit::VIRTUAL_HOST, $exchange->vhost);
-                }
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
+        $exchanges = $this->waitForPromiseToFulfill($this->object->listExchanges(self::VIRTUAL_HOST));
+        $this->assertNonEmptyArrayCollection($exchanges);
+        foreach ($exchanges as $exchange) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
+            $this->assertEquals(self::VIRTUAL_HOST, $exchange->vhost);
+        }
     }
 
     public function testListExchangeFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $success = false;
-        $this->object->listExchanges(self::NONEXISTENT_VIRTUAL_HOST)
-            ->then(function($exchanges) use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->listExchanges(self::NONEXISTENT_VIRTUAL_HOST));
     }
 
     public function testGetExchange()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
         $exchanges = $this->syncClient->listExchanges()->toArray();
         $expectedExchange = array_pop($exchanges);
 
-        $success = false;
-        $this->object->getExchange($expectedExchange->vhost, $expectedExchange->name)
-            ->then(function($exchange) use ($expectedExchange, &$success, $loop, $PHPUnit) {
-                $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
-                $PHPUnit->assertEquals($expectedExchange, $exchange);
-                $success = true;
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $exchange = $this->waitForPromiseToFulfill($this->object->getExchange($expectedExchange->vhost, $expectedExchange->name));
+        $this->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
+        $this->assertEquals($expectedExchange->name, $exchange->name);
     }
 
     public function testGetExchangeFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $success = false;
-        $this->object->getExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME)
-            ->then(function($exchanges) use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->getExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME));
     }
 
     public function testDeleteExchange()
@@ -255,40 +231,13 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $this->syncClient->addExchange($exchange);
         $this->syncClient->deleteExchange('/', self::EXCHANGE_TEST_NAME);
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
 
-        $success = false;
-        $this->object->getExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME)
-            ->then(function($exchanges) use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->getExchange(self::VIRTUAL_HOST, self::EXCHANGE_TEST_NAME));
     }
 
     public function testDeleteExchangeFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $success = false;
-        $this->object->deleteExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME)
-            ->then(function($exchanges) use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
-
-        $this->object->deleteExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME);
+        $this->assertPromiseRejects($this->object->deleteExchange(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME));
     }
 
     public function testAddExchange()
@@ -296,26 +245,11 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $exchange = new Exchange();
 
         $exchange->vhost = '/';
-        $exchange->type = 'fanout';
         $exchange->name = self::EXCHANGE_TEST_NAME;
         $exchange->durable = true;
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $success = false;
-        $this->object->addExchange($exchange)
-            ->then(function($resultExchange) use ($exchange, &$success, $loop, $PHPUnit) {
-                $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Exchange', $exchange);
-                $PHPUnit->assertEquals($resultExchange->toJson(), $exchange->toJson());
-                $success = true;
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $resultExchange = $this->waitForPromiseToFulfill($this->object->addExchange($exchange));
+        $this->assertEquals($resultExchange->name, $exchange->name);
     }
 
     public function testAddExchangeFailed()
@@ -327,20 +261,7 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $exchange->name = self::EXCHANGE_TEST_NAME;
         $exchange->durable = true;
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $success = false;
-        $this->object->addExchange($exchange)
-            ->then(function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->addExchange($exchange));
     }
 
     public function testAddExchangeThatAlreadyExists()
@@ -351,158 +272,65 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
 
         $this->syncClient->addExchange($exchange);
 
-        $exchange->durable = true;
+        $exchange->type = 'durable';
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $success = false;
-        $this->object->addExchange($exchange)
-            ->then(function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->addExchange($exchange));
     }
 
     public function testListQueues()
     {
-        $queue = $this->createQueue();
+        $this->createQueue();
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->listQueues()
-            ->then(function($queues) use ($PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($queues);
-                foreach ($queues as $queue) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $queue);
-                }
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
+        $queues = $this->waitForPromiseToFulfill($this->object->listQueues());
+        $this->assertNonEmptyArrayCollection($queues);
+        foreach ($queues as $queue) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $queue);
+        }
     }
 
-    private function createQueue()
-    {
-        $queue = new Queue();
-        $queue->vhost = self::VIRTUAL_HOST;
-        $queue->name = self::QUEUE_TEST_NAME;
-
-        $this->syncClient->addQueue($queue);
-
-        return $queue;
-    }
 
     public function testListQueuesWithVhost()
     {
-        $queue = $this->createQueue();
+        $this->createQueue();
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->listQueues(self::VIRTUAL_HOST)
-            ->then(function($queues) use ($PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($queues);
-                foreach ($queues as $queue) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $queue);
-                }
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
+        $queues = $this->waitForPromiseToFulfill($this->object->listQueues(self::VIRTUAL_HOST));
+        $this->assertNonEmptyArrayCollection($queues);
+        foreach ($queues as $queue) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $queue);
+        }
     }
 
     public function testListQueueFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->listQueues(self::NONEXISTENT_VIRTUAL_HOST)
-            ->then(function($queues) use ($PHPUnit, $loop) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->listQueues(self::NONEXISTENT_VIRTUAL_HOST));
     }
 
     public function testGetQueue()
     {
         $this->createQueue();
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
-        $this->object->getQueue(self::VIRTUAL_HOST, self::QUEUE_TEST_NAME)
-            ->then(function($resultQueue) use (&$success, $PHPUnit, $loop) {
-                $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $resultQueue);
-                $PHPUnit->assertEquals($PHPUnit::VIRTUAL_HOST, $resultQueue->vhost);
-                $PHPUnit->assertEquals($PHPUnit::QUEUE_TEST_NAME, $resultQueue->name);
-                $success = true;
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not fail');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $resultQueue = $this->waitForPromiseToFulfill($this->object->getQueue(self::VIRTUAL_HOST, self::QUEUE_TEST_NAME));
+        $this->assertInstanceOf('RabbitMQ\Management\Entity\Queue', $resultQueue);
+        $this->assertEquals(self::VIRTUAL_HOST, $resultQueue->vhost);
+        $this->assertEquals(self::QUEUE_TEST_NAME, $resultQueue->name);
     }
 
     public function testGetQueueFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->getQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME)
-            ->then(function($queues) use ($PHPUnit, $loop) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->getQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME));
     }
 
     public function testAddQueue()
     {
-        $loop = $this->loop;
-        $client = $this->object;
-        $PHPUnit = $this;
-
         $queue = new Queue();
         $queue->vhost = '/';
         $queue->name = self::QUEUE_TEST_NAME;
 
-        $this->object->addQueue($queue)
-            ->then(function($returnedQueue) use ($queue, $loop, $client, $PHPUnit) {
-                $PHPUnit->assertInstanceOf('RabbitMQ\\Management\\Entity\\Queue', $returnedQueue);
-                $PHPUnit->assertEquals($returnedQueue->toJson(), $queue->toJson());
+        $returnedQueue = $this->waitForPromiseToFulfill($this->object->addQueue($queue));
+        $this->assertInstanceOf('RabbitMQ\\Management\\Entity\\Queue', $returnedQueue);
+        $this->assertEquals($returnedQueue->name, $queue->name);
 
-                $client->deleteQueue('/', $PHPUnit::QUEUE_TEST_NAME)
-                ->then(function() use ($loop) {
-                        $loop->stop();
-                    });
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not success');
-            });
-
-        $loop->run();
+        $this->syncClient->deleteQueue('/', self::QUEUE_TEST_NAME);
     }
 
     public function testAddQueueFailed()
@@ -511,158 +339,66 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $queue->vhost = self::NONEXISTENT_VIRTUAL_HOST;
         $queue->name = self::QUEUE_TEST_NAME;
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->addQueue($queue)
-            ->then(function() use ($PHPUnit, $loop) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->addQueue($queue));
     }
 
     public function testDeleteQueue()
     {
         $queue = $this->createQueue();
 
-        $loop = $this->loop;
-        $client = $this->object;
-        $PHPUnit = $this;
-        $success = false;
-
-        $this->object->deleteQueue($queue->vhost, $queue->name)
-            ->then(function() use ($queue, $client, &$success) {
-                $client->getQueue($queue->vhost, $queue->name)
-                ->then(function() {
-                        $PHPUnit->fail('Should not success');
-                    }, function() use (&$success) {
-                        $success = true;
-                    });
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not fail');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->waitForPromiseToFulfill($this->object->deleteQueue($queue->vhost, $queue->name));
+        $this->assertPromiseRejects($this->object->getQueue($queue->vhost, $queue->name));
     }
 
     public function testDeleteQueueFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->deleteQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME)
-            ->then(function() use ($PHPUnit, $loop) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->deleteQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME));
     }
 
     public function testAddQueueThatAlreadyExists()
     {
         $queue = $this->createQueue();
-
         $queue->durable = true;
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-
-        $this->object->addQueue($queue)
-            ->then(function() use ($PHPUnit, $loop) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->addQueue($queue));
     }
+
 
     public function testPurgeQueueFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
-        $this->object->purgeQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME)
-            ->then(function() use ($PHPUnit, $loop) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->purgeQueue(self::NONEXISTENT_VIRTUAL_HOST, self::QUEUE_TEST_NAME));
     }
+
 
     public function testListBindingsByQueue()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
+        $this->createQueue();
 
         foreach ($this->syncClient->listQueues() as $queue) {
-            $this->object->listBindingsByQueue($queue)
-            ->then(function($bindings) use ($loop, $queue, $PHPUnit) {
-                foreach ($bindings as $binding) {
-                    /* @var $binding Binding */
-                    $PHPUnit->assertEquals('/', $binding->vhost);
-                    $PHPUnit->assertEquals($queue->name, $binding->destination);
-                }
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not fail');
-            });
+            $bindings = $this->waitForPromiseToFulfill($this->object->listBindingsByQueue($queue));
+            foreach ($bindings as $binding) {
+                $this->assertEquals('/', $binding->vhost);
+                $this->assertEquals($queue->name, $binding->destination);
+            }
         }
-
-        $loop->run();
     }
+
 
     public function testListBindingsByQueueFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
         $queue = new Queue();
         $queue->name = 'nonexistent queue';
         $queue->vhost = self::NONEXISTENT_VIRTUAL_HOST;
 
-        $this->object->listBindingsByQueue($queue)
-            ->then(function() use ($PHPUnit, $loop) {
-                $PHPUnit->fail('Should not success');
-            }, function() use (&$success, $loop) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
+        $bindings = $this->waitForPromiseToFulfill($this->object->listBindingsByQueue($queue));
+        $count = count($bindings);
+        $this->assertEquals(0, $count);
     }
+
 
     public function testListBindingsByExchangeAndQueue()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
-        $queue = $this->createQueue();
-
-        $exchange = new Exchange();
-        $exchange->vhost = self::VIRTUAL_HOST;
-        $exchange->name = self::EXCHANGE_TEST_NAME;
-
-        $this->syncClient->addExchange($exchange);
+        $this->createBinding();
 
         foreach ($this->syncClient->listQueues() as $queue) {
             foreach ($this->syncClient->listExchanges() as $exchange) {
@@ -670,59 +406,26 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
                     continue;
                 }
 
-                $this->object->listBindingsByExchangeAndQueue(self::VIRTUAL_HOST, $exchange->name, $queue->name)
-                    ->then(function($bindings) use (&$success, $loop, $queue, $exchange, $PHPUnit) {
-                        foreach ($bindings as $binding) {
-                            $PHPUnit->assertEquals('/', $binding->vhost);
-                            $PHPUnit->assertEquals($queue->name, $binding->destination);
-                            $PHPUnit->assertEquals($exchange->name, $binding->source);
-                        }
-                        $success = true;
-                        $loop->stop();
-                    }, function() use ($PHPUnit) {
-                        $PHPUnit->fail('Should not fail');
-                    });
-
-                foreach ($this->object->listBindingsByExchangeAndQueue('/', $exchange->name, $queue->name) as $binding) {
-                    /* @var $binding Binding */
+                $bindings = $this->waitForPromiseToFulfill($this->object->listBindingsByExchangeAndQueue(self::VIRTUAL_HOST, $exchange->name, $queue->name));
+                foreach ($bindings as $binding) {
                     $this->assertEquals('/', $binding->vhost);
                     $this->assertEquals($queue->name, $binding->destination);
                     $this->assertEquals($exchange->name, $binding->source);
                 }
             }
         }
-
-        $loop->run();
-        $this->assertTrue($success);
     }
+
 
     public function testListBindingsByExchangeAndQueueFailed()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
-        $this->object->listBindingsByExchangeAndQueue(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME)
-            ->then(function($bindings) use ($PHPUnit, $loop, &$success) {
-                $success = true;
-                $loop->stop();
-                $PHPUnit->assertCount(0, $bindings);
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should not fail');
-            });
-
-        $loop->run();
-
-        $this->assertTrue($success);
+        $bindings = $this->waitForPromiseToFulfill($this->object->listBindingsByExchangeAndQueue(self::NONEXISTENT_VIRTUAL_HOST, self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME));
+        $this->assertCount(0, $bindings);
     }
+
 
     public function testAddBinding()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-        $client = $this->object;
-
         $queue = $this->createQueue();
 
         $exchange = new Exchange();
@@ -739,32 +442,15 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $binding->routing_key = 'rounting.key';
         $binding->arguments = array('bim' => 'boom');
 
-        $this->object->addBinding($binding)
-            ->then(function($res) use ($client, &$success, $loop, $PHPUnit) {
-                $client->listBindingsByExchangeAndQueue('/', $PHPUnit::EXCHANGE_TEST_NAME, $PHPUnit::QUEUE_TEST_NAME)
-                ->then(function($bindings) use ($client, &$success, $loop) {
-                    foreach ($bindings as $binding) {
-                        if ($binding->routing_key === 'rounting.key' && $binding->arguments === array('bim' => 'boom')) {
-                            $success = true;
+        $this->waitForPromiseToFulfill($this->object->addBinding($binding));
+        $bindings = $this->waitForPromiseToFulfill($this->object->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME));
+        foreach ($bindings as $binding) {
+            $this->assertTrue($binding->routing_key === 'rounting.key' && $binding->arguments === array('bim' => 'boom'));
+        }
+        $this->waitForPromiseToFulfill($this->object->deleteBinding($binding));
 
-                            $found = $binding;
-                            break;
-                        }
-                    }
-                    $client->deleteBinding($binding)
-                    ->then(function() use ($loop) {
-                        $loop->stop();
-                    });
-                }, function() use ($PHPUnit) {
-                    $PHPUnit->fail('Should not fail');
-                });
-            }, function($error) use ($PHPUnit) {
-                $PHPUnit->fail('Should not fail');
-            });
-
-            $loop->run();
-            $this->assertTrue($success);
     }
+
 
     public function testAddBindingFailed()
     {
@@ -773,191 +459,82 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
         $binding->source = self::EXCHANGE_TEST_NAME;
         $binding->destination = self::QUEUE_TEST_NAME;
 
-
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
-        $this->object->addBinding($binding)
-            ->then(function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no success');
-            }, function() use ($loop, &$success) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->addBinding($binding));
     }
+
 
     public function testDeleteBinding()
     {
         $this->createBinding();
+        $found = null;
+        $bindings = $this->waitForPromiseToFulfill($this->object->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME));
+        foreach ($bindings as $binding) {
+            if ($binding->routing_key == 'rounting.key') {
+                $found = $binding;
+                break;
+            }
+        }
+        $this->assertNotNull($found);
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-        $client = $this->object;
+        $this->waitForPromiseToFulfill($this->object->deleteBinding($found));
+        $bindings = $this->waitForPromiseToFulfill($this->object->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME));
+        $found = null;
 
-        $this->object->listBindingsByExchangeAndQueue('/', self::EXCHANGE_TEST_NAME, self::QUEUE_TEST_NAME)
-            ->then(function($bindings) use ($client, &$success, $loop, $PHPUnit) {
-                $found = false;
-                foreach ($bindings as $binding) {
-                    if ($binding->routing_key == 'rounting.key') {
-                        $found = $binding;
-                        break;
-                    }
-                }
-                $client->deleteBinding($found)
-                ->then(function() use ($client, &$success, $loop, $PHPUnit) {
-                    $client->listBindingsByExchangeAndQueue('/', $PHPUnit::EXCHANGE_TEST_NAME, $PHPUnit::QUEUE_TEST_NAME)
-                    ->then(function($bindings) use (&$success, $loop, $PHPUnit) {
-                            $found = false;
-
-                            foreach ($bindings as $binding) {
-                                if ($binding->routing_key == 'rounting.key') {
-                                    $found = true;
-                                }
-                            }
-
-                            if ($found) {
-                                $PHPUnit->fail('unable to find delete the binding');
-                            }
-                            $success = true;
-                            $loop->stop();
-                        }, function() {
-                            $PHPUnit->fail('Should no failed');
-                        });
-                }, function() use ($PHPUnit) {
-                    $PHPUnit->fail('Should no failed');
-                });
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no failed');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        foreach ($bindings as $binding) {
+            if ($binding->routing_key == 'rounting.key') {
+                $found = $binding;
+                break;
+            }
+        }
+        $this->assertNull($found);
     }
 
-    private function createBinding()
-    {
-        $queue = $this->createQueue();
-
-        $exchange = new Exchange();
-        $exchange->name = self::EXCHANGE_TEST_NAME;
-        $exchange->vhost = '/';
-
-        $this->syncClient->addExchange($exchange);
-
-        $binding = new Binding();
-        $binding->vhost = '/';
-        $binding->source = self::EXCHANGE_TEST_NAME;
-        $binding->destination = self::QUEUE_TEST_NAME;
-        $binding->routing_key = 'rounting.key';
-
-        $this->syncClient->addBinding($binding);
-
-        return $binding;
-    }
 
     public function testDeleteNonexistentBinding()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
         $binding = new Binding();
         $binding->vhost = self::VIRTUAL_HOST;
         $binding->source = self::EXCHANGE_TEST_NAME;
         $binding->destination = self::QUEUE_TEST_NAME;
         $binding->properties_key = 'bingo';
 
-        $this->object->deleteBinding($binding)
-            ->then(function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no success');
-            }, function() use ($loop, &$success) {
-                $success = true;
-                $loop->stop();
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseRejects($this->object->deleteBinding($binding));
     }
+
 
     public function testListBindings()
     {
         $this->createBinding();
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
+        $bindings = $this->waitForPromiseToFulfill($this->object->listBindings());
+        $this->assertNonEmptyArrayCollection($bindings);
+        foreach ($bindings as $binding) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Binding', $binding);
+        }
 
-        $this->object->listBindings()
-            ->then(function($bindings) use (&$success, $PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($bindings);
-                foreach ($bindings as $binding) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Binding', $binding);
-                }
-                $success = true;
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
     }
+
 
     public function testListBindingsWithVhost()
     {
         $this->createBinding();
 
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
-        $this->object->listBindings(self::VIRTUAL_HOST)
-            ->then(function($bindings) use (&$success, $PHPUnit, $loop) {
-                $PHPUnit->assertNonEmptyArrayCollection($bindings);
-                foreach ($bindings as $binding) {
-                    $PHPUnit->assertInstanceOf('RabbitMQ\Management\Entity\Binding', $binding);
-                }
-                $success = true;
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $bindings = $this->waitForPromiseToFulfill($this->object->listBindings(self::VIRTUAL_HOST));
+        $this->assertNonEmptyArrayCollection($bindings);
+        foreach ($bindings as $binding) {
+            $this->assertInstanceOf('RabbitMQ\Management\Entity\Binding', $binding);
+        }
     }
+
 
     public function testAlivenessTest()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-
-        $this->object->alivenessTest(self::VIRTUAL_HOST)
-            ->then(function($result) use ($PHPUnit, &$success){
-                $PHPUnit->assertTrue($result);
-                $success = true;
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->assertPromiseFulfills($this->object->alivenessTest(self::VIRTUAL_HOST));
     }
 
 
     public function testPurgeQueue()
     {
-        $loop = $this->loop;
-        $PHPUnit = $this;
-        $success = false;
-        $client = $this->object;
-
         $queue = $this->createQueue();
 
         $exchange = new Exchange();
@@ -976,36 +553,63 @@ class AsyncAPIClientTest extends \PHPUnit_Framework_TestCase
 
         $message = json_encode(array(
             'properties' => array(),
-            'routing_key'      => self::QUEUE_TEST_NAME,
-            'payload'          => 'body',
+            'routing_key' => self::QUEUE_TEST_NAME,
+            'payload' => 'body',
             'payload_encoding' => 'string',
-            ));
+        ));
+        $message = str_replace('[]', '{}', $message);
 
         $n = 12;
         while ($n > 0) {
-            $this->syncClientClient->post('/api/exchanges/' . urlencode('/') . '/' . self::EXCHANGE_TEST_NAME . '/publish', array('content-type' => 'application/json'), $message)->send();
+            $this->syncClientClient->post('/api/exchanges/' . urlencode('/') . '/' . self::EXCHANGE_TEST_NAME . '/publish',
+                ['headers' => ['content-type' => 'application/json'], 'body' => $message]);
             $n--;
         }
 
-        usleep(2000000);
+        sleep(10);
         $this->syncClient->refreshQueue($queue);
         $this->assertEquals(12, $queue->messages_ready);
 
-        $this->object->purgeQueue('/', self::QUEUE_TEST_NAME)
-            ->then(function() use ($client, &$success, $PHPUnit, $queue){
-
-                usleep(4000000);
-                $client->refreshQueue($queue);
-                $success = true;
-                $PHPUnit->assertEquals(0, $queue->messages_ready);
-                $loop->stop();
-            }, function() use ($PHPUnit) {
-                $PHPUnit->fail('Should no fail');
-            });
-
-        $loop->run();
-        $this->assertTrue($success);
+        $this->waitForPromiseToFulfill($this->object->purgeQueue('/', self::QUEUE_TEST_NAME));
+        sleep(15);
+        $this->syncClient->refreshQueue($queue);
+        $this->assertEquals(0, $queue->messages_ready);
     }
+
+
+    private function createQueue()
+    {
+        $queue = new Queue();
+        $queue->vhost = self::VIRTUAL_HOST;
+        $queue->name = self::QUEUE_TEST_NAME;
+
+        $this->syncClient->addQueue($queue);
+
+        return $queue;
+    }
+
+
+    private function createBinding()
+    {
+        $this->createQueue();
+
+        $exchange = new Exchange();
+        $exchange->name = self::EXCHANGE_TEST_NAME;
+        $exchange->vhost = '/';
+
+        $this->syncClient->addExchange($exchange);
+
+        $binding = new Binding();
+        $binding->vhost = '/';
+        $binding->source = self::EXCHANGE_TEST_NAME;
+        $binding->destination = self::QUEUE_TEST_NAME;
+        $binding->routing_key = 'rounting.key';
+
+        $this->syncClient->addBinding($binding);
+
+        return $binding;
+    }
+
 
     public function assertNonEmptyArrayCollection($collection)
     {

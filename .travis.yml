@@ -1,18 +1,18 @@
 language: php
 
 services:
-  - rabbitmq
+  - docker
+
+before_install:
+  - docker build -t rabbitmq-testserver testserver
+  - docker run -d -p 5672:5672 -p 15672:15672 rabbitmq-testserver
 
 before_script:
-  - composer install --dev --prefer-source
+  - composer install --prefer-source
 
 php:
-  - 5.3
-  - 5.4
-  - 5.5
-  - 5.6
-  - 7.0
-  - 7.1
+  - 7.2
+  - 7.3
 
 script:
   - vendor/bin/phpunit
