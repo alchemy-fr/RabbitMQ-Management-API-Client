@@ -67,3 +67,4 @@ class HttpClient extends Client
 
         return $client;
     }
+}
