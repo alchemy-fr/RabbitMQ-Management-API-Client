@@ -36,18 +36,35 @@ class HttpClient extends Client
     public static function factory($options = array())
     {
         $default = array(
-            'base_url' => '{scheme}://{username}:{password}@{host}:{port}',
-            'scheme'   => 'http',
+            'base_uri' => '{scheme}://{username}:{password}@{host}:{port}/',
+            'scheme' => 'http',
             'username' => 'guest',
             'password' => 'guest',
-            'port'     => '15672',
+            'port' => '15672',
         );
 
-        $required = array('username', 'password', 'host', 'base_url');
-        $config = Collection::fromConfig($options, $default, $required);
+        /* accommodate legacy clients of this library using base_url where Guzzle now wants base_uri */
+        if(array_key_exists('base_url',$options) and !array_key_exists('base_uri',$options)) {
+            $options['base_uri']=$options['base_url'];
+            unset($options['base_url']);
+        }
 
-        $client = new self($config->get('base_url'), $config);
+        $required = array('username', 'password', 'host', 'base_uri');
+        $config = array_merge($default,$options);
+        if ($missing = array_diff($required, array_keys($config))) {
+            throw new RuntimeException('Config is missing the following keys: ' . implode(', ', $missing));
+        }
+
+        foreach ($config as $key => $value) {
+            if ($key === 'base_uri') {
+                continue;
+            }
+            $config['base_uri'] = str_replace('{' . $key . '}', $value, $config['base_uri']);
+        }
+
+
+        $client = new self($config);
+
 
         return $client;
     }
-}
