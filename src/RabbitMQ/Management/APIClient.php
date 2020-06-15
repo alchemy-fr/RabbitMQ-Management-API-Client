@@ -332,11 +332,7 @@ class APIClient
 
     private function retrieveCollection($uri, $targetEntity)
     {
-        try {
-            $res = $this->client->get($uri)->send()->getBody(true);
-        } catch (RequestException $e) {
-            throw new RuntimeException(sprintf('Unable to fetch data for %s', $targetEntity), $e->getCode(), $e);
-        }
+        $res = $this->client->get($uri)->getBody();
 
         $data = json_decode($res, true);
 
