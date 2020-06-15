@@ -1,5 +1,5 @@
 {
-    "name": "alchemy/rabbitmq-management-client",
+    "name": "vidaxl/rabbitmq-management-client",
     "type": "library",
     "description": "RabbitMQ Management Plugin API Client",
     "keywords": ["api", "rabbitmq", "management"],
