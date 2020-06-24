@@ -3,7 +3,7 @@
 namespace RabbitMQ\Management;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Guzzle\Http\Exception\RequestException;
+use GuzzleHttp\Exception\RequestException;
 use RabbitMQ\Management\Entity\Binding;
 use RabbitMQ\Management\Entity\Channel;
 use RabbitMQ\Management\Entity\Exchange;
