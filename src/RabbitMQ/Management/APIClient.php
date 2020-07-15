@@ -49,7 +49,7 @@ class APIClient
     public function deleteConnection($name)
     {
         try {
-            $this->client->delete(sprintf('/api/connections/%s', urlencode($name)))->send();
+            $this->client->delete(sprintf('/api/connections/%s', urlencode($name)));
         } catch (RequestException $e) {
             throw new RuntimeException('Failed to delete connection', $e->getCode(), $e);
         }
@@ -108,7 +108,7 @@ class APIClient
         $uri = sprintf('/api/exchanges/%s/%s', urlencode($vhost), urlencode($name));
 
         try {
-            $this->client->delete($uri)->send();
+            $this->client->delete($uri);
         } catch (RequestException $e) {
             throw new RuntimeException('Unable to delete exchange', $e->getCode(), $e);
         }
@@ -136,7 +136,7 @@ class APIClient
         $uri = sprintf('/api/exchanges/%s/%s', urlencode($exchange->vhost), urlencode($exchange->name));
 
         try {
-            $response = $this->client->put($uri, array('Content-Type' => 'application/json'), $exchange->toJson())->send();
+            $response = $this->client->put($uri, array('Content-Type' => 'application/json'), $exchange->toJson());
         } catch (RequestException $e) {
             if ($data = json_decode($e->getResponse()->getBody(true), true)) {
                 if (isset($data['reason']) && strpos($data['reason'], '406 PRECONDITION_FAILED') === 0) {
@@ -314,7 +314,7 @@ class APIClient
     private function retrieveEntity($uri, $targetEntity, EntityInterface $entity = null)
     {
         try {
-            $res = $this->client->get($uri)->send()->getBody(true);
+            $res = $this->client->get($uri)->getBody(true);
         } catch (RequestException $e) {
             if ($e->getResponse()->getStatusCode() === 404) {
                 throw new EntityNotFoundException('Entity not found', $e->getCode(), $e);
